@@ -124,8 +124,7 @@ mod tests {
 
     #[test]
     fn message_search_options_default_limit() {
-        let opts: MessageSearchOptions =
-            serde_json::from_str(r#"{"query":"hello"}"#).unwrap();
+        let opts: MessageSearchOptions = serde_json::from_str(r#"{"query":"hello"}"#).unwrap();
         assert_eq!(opts.limit, 10);
     }
 }

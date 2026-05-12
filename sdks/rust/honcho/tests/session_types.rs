@@ -45,7 +45,11 @@ schema_tests!(session, "Session", Session);
 schema_tests!(session_create, "SessionCreate", SessionCreate);
 schema_tests!(session_update, "SessionUpdate", SessionUpdate);
 schema_tests!(session_get, "SessionGet", SessionGet);
-schema_tests!(session_configuration, "SessionConfiguration", SessionConfiguration);
+schema_tests!(
+    session_configuration,
+    "SessionConfiguration",
+    SessionConfiguration
+);
 schema_tests!(session_context, "SessionContext", SessionContext);
 schema_tests!(session_peer_config, "SessionPeerConfig", SessionPeerConfig);
 schema_tests!(

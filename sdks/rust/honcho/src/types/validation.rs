@@ -4,7 +4,7 @@
 //! that `FastAPI` returns for request validation failures (HTTP 422). They are
 //! standalone types usable alongside [`crate::error::HonchoError`] for
 //! inspecting validation details from the `body` field of
-//! [`HonchoError::UnprocessableEntity`].
+//! [`crate::error::HonchoError::UnprocessableEntity`].
 
 use serde::{Deserialize, Serialize};
 

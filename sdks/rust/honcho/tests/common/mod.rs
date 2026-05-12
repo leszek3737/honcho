@@ -9,8 +9,7 @@ static SCHEMAS: std::sync::OnceLock<serde_json::Value> = std::sync::OnceLock::ne
 
 fn openapi_spec() -> &'static serde_json::Value {
     SCHEMAS.get_or_init(|| {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .expect("CARGO_MANIFEST_DIR not set");
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
         let path = Path::new(&manifest_dir).join("../../../docs/v3/openapi.json");
         let content = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("failed to read openapi.json at {:?}: {e}", path));
@@ -59,8 +58,7 @@ fn resolve_refs(value: &serde_json::Value, spec: &serde_json::Value) -> serde_js
 }
 
 pub fn load_fixture(name: &str, variant: &str) -> serde_json::Value {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR not set");
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let mut path = PathBuf::from(manifest_dir);
     path.push("tests/fixtures");
     path.push(name);
@@ -97,13 +95,18 @@ where
         .unwrap_or_else(|e| panic!("deserialize failed for {}: {e}", std::any::type_name::<T>()));
     let re_serialized = serde_json::to_string(&deserialized)
         .unwrap_or_else(|e| panic!("serialize failed for {}: {e}", std::any::type_name::<T>()));
-    let re_deserialized: T = serde_json::from_str(&re_serialized)
-        .unwrap_or_else(|e| panic!("re-deserialize failed for {}: {e}", std::any::type_name::<T>()));
+    let re_deserialized: T = serde_json::from_str(&re_serialized).unwrap_or_else(|e| {
+        panic!(
+            "re-deserialize failed for {}: {e}",
+            std::any::type_name::<T>()
+        )
+    });
 
     let first_json = canonicalize(&serde_json::to_value(&deserialized).unwrap());
     let second_json = canonicalize(&serde_json::to_value(&re_deserialized).unwrap());
     assert_eq!(
-        first_json, second_json,
+        first_json,
+        second_json,
         "roundtrip mismatch for {}",
         std::any::type_name::<T>()
     );

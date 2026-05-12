@@ -81,9 +81,7 @@ fn rate_limit_429_parses_retry_after_seconds() {
 fn rate_limit_429_parses_retry_after_http_date() {
     let status = reqwest::StatusCode::TOO_MANY_REQUESTS;
     let mut headers = HeaderMap::new();
-    let now = Utc
-        .with_ymd_and_hms(2026, 10, 21, 7, 27, 55)
-        .unwrap();
+    let now = Utc.with_ymd_and_hms(2026, 10, 21, 7, 27, 55).unwrap();
     headers.insert(
         "retry-after",
         HeaderValue::from_static("Wed, 21 Oct 2026 07:28:00 GMT"),
@@ -98,10 +96,7 @@ fn rate_limit_429_parses_retry_after_http_date() {
             ..
         } => {
             let secs = dur.as_secs_f64();
-            assert!(
-                secs >= 4.9 && secs <= 5.1,
-                "expected ~5s, got {secs}s"
-            );
+            assert!(secs >= 4.9 && secs <= 5.1, "expected ~5s, got {secs}s");
         }
         _ => panic!("expected RateLimit with retry_after, got {err:?}"),
     }
@@ -118,37 +113,28 @@ fn rate_limit_429_without_retry_after_is_none() {
 
     match err {
         HonchoError::RateLimit {
-            retry_after: None,
-            ..
+            retry_after: None, ..
         } => {}
-        _ => panic!(
-            "expected RateLimit with None retry_after, got {err:?}"
-        ),
+        _ => panic!("expected RateLimit with None retry_after, got {err:?}"),
     }
 }
 
 #[test]
 fn retry_after_with_garbage_returns_none() {
     let mut headers = HeaderMap::new();
-    headers.insert(
-        "retry-after",
-        HeaderValue::from_static("not-a-valid-value"),
-    );
+    headers.insert("retry-after", HeaderValue::from_static("not-a-valid-value"));
     let now = Utc::now();
 
-    let result =
-        parse_retry_after(headers.get("retry-after").unwrap(), now);
+    let result = parse_retry_after(headers.get("retry-after").unwrap(), now);
     assert!(result.is_none());
 }
 
 #[test]
 fn error_body_extracts_message_field_priority() {
-    let (msg, _) =
-        parse_error_body(r#"{"detail":"d","message":"m","error":"e"}"#.as_bytes());
+    let (msg, _) = parse_error_body(r#"{"detail":"d","message":"m","error":"e"}"#.as_bytes());
     assert_eq!(msg, "d");
 
-    let (msg, _) =
-        parse_error_body(r#"{"message":"m","error":"e"}"#.as_bytes());
+    let (msg, _) = parse_error_body(r#"{"message":"m","error":"e"}"#.as_bytes());
     assert_eq!(msg, "m");
 
     let (msg, _) = parse_error_body(r#"{"error":"e"}"#.as_bytes());
@@ -166,8 +152,7 @@ fn error_body_extracts_message_field_priority() {
 fn display_includes_status_and_message(#[case] status: u16) {
     let status = reqwest::StatusCode::from_u16(status).unwrap();
     let headers = HeaderMap::new();
-    let body =
-        bytes::Bytes::from(r#"{"message":"something went wrong"}"#);
+    let body = bytes::Bytes::from(r#"{"message":"something went wrong"}"#);
     let now = Utc::now();
 
     let err = from_response(status, &headers, &body, now);
@@ -254,11 +239,7 @@ fn error_code_is_stable_string() {
     ];
 
     for (expected_code, err) in codes {
-        assert_eq!(
-            err.code(),
-            expected_code,
-            "mismatch for {expected_code}"
-        );
+        assert_eq!(err.code(), expected_code, "mismatch for {expected_code}");
     }
 }
 
@@ -274,8 +255,7 @@ async fn source_chain_for_transport_and_io_and_decode() {
         .into();
     assert!(transport_err.source().is_some());
 
-    let json_err =
-        serde_json::from_str::<Vec<i32>>("{}").unwrap_err();
+    let json_err = serde_json::from_str::<Vec<i32>>("{}").unwrap_err();
     let decode_err = HonchoError::Decode {
         path: "root".to_string(),
         source: json_err,

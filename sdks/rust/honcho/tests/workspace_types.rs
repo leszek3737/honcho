@@ -5,7 +5,8 @@ mod common;
 use common::{load_fixture, roundtrip, validate_openapi};
 use honcho_ai::types::workspace::{
     DreamConfiguration, PeerCardConfiguration, ReasoningConfiguration, SummaryConfiguration,
-    Workspace, WorkspaceConfiguration, WorkspaceCreate, WorkspaceGet, WorkspacePage, WorkspaceUpdate,
+    Workspace, WorkspaceConfiguration, WorkspaceCreate, WorkspaceGet, WorkspacePage,
+    WorkspaceUpdate,
 };
 
 macro_rules! schema_test {
@@ -43,11 +44,23 @@ macro_rules! schema_test {
 schema_test!(workspace, "Workspace", Workspace);
 schema_test!(workspace_create, "WorkspaceCreate", WorkspaceCreate);
 schema_test!(workspace_update, "WorkspaceUpdate", WorkspaceUpdate);
-schema_test!(workspace_configuration, "WorkspaceConfiguration", WorkspaceConfiguration);
+schema_test!(
+    workspace_configuration,
+    "WorkspaceConfiguration",
+    WorkspaceConfiguration
+);
 schema_test!(workspace_get, "WorkspaceGet", WorkspaceGet);
 schema_test!(workspace_page, "Page_Workspace_", WorkspacePage);
-schema_test!(reasoning_config, "ReasoningConfiguration", ReasoningConfiguration);
-schema_test!(peer_card_config, "PeerCardConfiguration", PeerCardConfiguration);
+schema_test!(
+    reasoning_config,
+    "ReasoningConfiguration",
+    ReasoningConfiguration
+);
+schema_test!(
+    peer_card_config,
+    "PeerCardConfiguration",
+    PeerCardConfiguration
+);
 schema_test!(summary_config, "SummaryConfiguration", SummaryConfiguration);
 schema_test!(dream_config, "DreamConfiguration", DreamConfiguration);
 

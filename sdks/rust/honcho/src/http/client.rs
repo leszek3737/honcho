@@ -121,9 +121,11 @@ impl HttpClient {
         TBody: Serialize + ?Sized,
         TResp: DeserializeOwned + 'static,
     {
-        let url = self.inner.base_url.join(path).map_err(|e| {
-            HonchoError::Configuration(format!("failed to join URL path: {e}"))
-        })?;
+        let url = self
+            .inner
+            .base_url
+            .join(path)
+            .map_err(|e| HonchoError::Configuration(format!("failed to join URL path: {e}")))?;
 
         let merged_query: Vec<(&str, &str)> = self
             .inner
@@ -289,7 +291,9 @@ impl HttpClient {
 #[must_use]
 pub fn delay_for_attempt(attempt: u32) -> Duration {
     let shift = attempt.min(31);
-    INITIAL_RETRY_DELAY.saturating_mul(1u32 << shift).min(MAX_RETRY_DELAY)
+    INITIAL_RETRY_DELAY
+        .saturating_mul(1u32 << shift)
+        .min(MAX_RETRY_DELAY)
 }
 
 #[cfg(test)]
@@ -297,21 +301,16 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use std::time::Duration;
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-    use wiremock::matchers::{
-        body_json, header, header_exists, method, path, query_param,
-    };
     use crate::error::HonchoError;
     use crate::http::routes;
     use crate::types::peer::Peer;
     use crate::types::workspace::Workspace;
+    use std::time::Duration;
+    use wiremock::matchers::{body_json, header, header_exists, method, path, query_param};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     async fn make_client(server: &MockServer) -> HttpClient {
-        HttpClient::from_params(
-            HttpClient::builder().base_url(server.uri()).build(),
-        )
-        .unwrap()
+        HttpClient::from_params(HttpClient::builder().base_url(server.uri()).build()).unwrap()
     }
 
     async fn make_client_with_key(server: &MockServer, api_key: &str) -> HttpClient {
@@ -348,9 +347,7 @@ mod tests {
     #[tokio::test]
     async fn builder_creates_client_with_valid_url() {
         let server = MockServer::start().await;
-        let result = HttpClient::from_params(
-            HttpClient::builder().base_url(server.uri()).build(),
-        );
+        let result = HttpClient::from_params(HttpClient::builder().base_url(server.uri()).build());
         assert!(result.is_ok());
     }
 
@@ -372,10 +369,7 @@ mod tests {
     async fn builder_strips_trailing_slash() {
         let server = MockServer::start().await;
         let base = format!("{}/", server.uri());
-        let client = HttpClient::from_params(
-            HttpClient::builder().base_url(base).build(),
-        )
-        .unwrap();
+        let client = HttpClient::from_params(HttpClient::builder().base_url(base).build()).unwrap();
 
         Mock::given(method("GET"))
             .and(path("/v3/test"))
@@ -622,9 +616,7 @@ mod tests {
         .unwrap();
 
         Mock::given(method("GET"))
-            .respond_with(
-                ResponseTemplate::new(200).set_delay(Duration::from_secs(5)),
-            )
+            .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(5)))
             .mount(&server)
             .await;
 
@@ -699,8 +691,7 @@ mod tests {
 
         Mock::given(method("GET"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(serde_json::json!({"bad": true})),
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"bad": true})),
             )
             .mount(&server)
             .await;
@@ -834,9 +825,7 @@ mod tests {
             .await;
 
         Mock::given(method("GET"))
-            .respond_with(
-                ResponseTemplate::new(429).insert_header("retry-after", "0"),
-            )
+            .respond_with(ResponseTemplate::new(429).insert_header("retry-after", "0"))
             .up_to_n_times(1)
             .mount(&server)
             .await;
@@ -856,9 +845,7 @@ mod tests {
             .await;
 
         Mock::given(method("GET"))
-            .respond_with(
-                ResponseTemplate::new(429).insert_header("retry-after", "1"),
-            )
+            .respond_with(ResponseTemplate::new(429).insert_header("retry-after", "1"))
             .up_to_n_times(1)
             .mount(&server)
             .await;
@@ -888,7 +875,10 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result: Peer = client.get(&routes::peer("ws1", "alice"), &[]).await.unwrap();
+        let result: Peer = client
+            .get(&routes::peer("ws1", "alice"), &[])
+            .await
+            .unwrap();
         assert_eq!(result.id, "p1");
         assert_eq!(result.workspace_id, "ws1");
     }

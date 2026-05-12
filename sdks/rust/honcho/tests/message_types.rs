@@ -95,7 +95,10 @@ fn message_configuration_with_reasoning() {
     let cfg: MessageConfiguration = serde_json::from_value(val).unwrap();
     let r = cfg.reasoning.unwrap();
     assert_eq!(r.enabled, Some(true));
-    assert_eq!(r.custom_instructions, Some("Analyze sentiment carefully".to_string()));
+    assert_eq!(
+        r.custom_instructions,
+        Some("Analyze sentiment carefully".to_string())
+    );
 }
 
 #[test]

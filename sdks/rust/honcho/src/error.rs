@@ -213,10 +213,7 @@ pub fn from_response(
                 retry_after,
             }
         }
-        s if s >= 500 => HonchoError::Server {
-            status: s,
-            message,
-        },
+        s if s >= 500 => HonchoError::Server { status: s, message },
         _ => HonchoError::Server {
             status: status.as_u16(),
             message,

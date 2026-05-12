@@ -64,9 +64,7 @@ pub(crate) fn peer_chat(workspace_id: &str, peer_id: &str) -> String {
 pub(crate) fn peer_representation(workspace_id: &str, peer_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!peer_id.is_empty(), "peer_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/peers/{peer_id}/representation"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/peers/{peer_id}/representation")
 }
 
 /// Builds path for a peer's card.
@@ -94,9 +92,7 @@ pub(crate) fn peer_search(workspace_id: &str, peer_id: &str) -> String {
 pub(crate) fn peer_sessions_list(workspace_id: &str, peer_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!peer_id.is_empty(), "peer_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/peers/{peer_id}/sessions"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/peers/{peer_id}/sessions")
 }
 
 /// Builds path for creating/listing sessions in a workspace.
@@ -115,62 +111,46 @@ pub(crate) fn sessions_list(workspace_id: &str) -> String {
 pub(crate) fn session(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}")
 }
 
 /// Builds path for cloning a session.
 pub(crate) fn session_clone(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/clone"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/clone")
 }
 
 /// Builds path for a session's context.
 pub(crate) fn session_context(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/context"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/context")
 }
 
 /// Builds path for a session's summaries.
 pub(crate) fn session_summaries(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/summaries"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/summaries")
 }
 
 /// Builds path for searching within a session.
 pub(crate) fn session_search(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/search"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/search")
 }
 
 /// Builds path for listing peers in a session.
 pub(crate) fn session_peers(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/peers"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/peers")
 }
 
 /// Builds path for a peer's configuration within a session.
-pub(crate) fn session_peer_config(
-    workspace_id: &str,
-    session_id: &str,
-    peer_id: &str,
-) -> String {
+pub(crate) fn session_peer_config(workspace_id: &str, session_id: &str, peer_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
     assert!(!peer_id.is_empty(), "peer_id must not be empty");
@@ -183,26 +163,18 @@ pub(crate) fn session_peer_config(
 pub(crate) fn messages(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/messages"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/messages")
 }
 
 /// Builds path for the message list endpoint.
 pub(crate) fn messages_list(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/messages/list"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/messages/list")
 }
 
 /// Builds path for a specific message.
-pub(crate) fn message(
-    workspace_id: &str,
-    session_id: &str,
-    message_id: &str,
-) -> String {
+pub(crate) fn message(workspace_id: &str, session_id: &str, message_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
     assert!(!message_id.is_empty(), "message_id must not be empty");
@@ -215,9 +187,7 @@ pub(crate) fn message(
 pub(crate) fn messages_upload(workspace_id: &str, session_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!session_id.is_empty(), "session_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/messages/upload"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/sessions/{session_id}/messages/upload")
 }
 
 /// Builds path for listing conclusions in a workspace.
@@ -229,26 +199,20 @@ pub(crate) fn conclusions(workspace_id: &str) -> String {
 /// Builds path for the conclusions list endpoint.
 pub(crate) fn conclusions_list(workspace_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/conclusions/list"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/conclusions/list")
 }
 
 /// Builds path for querying conclusions.
 pub(crate) fn conclusions_query(workspace_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/conclusions/query"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/conclusions/query")
 }
 
 /// Builds path for a specific conclusion.
 pub(crate) fn conclusion(workspace_id: &str, conclusion_id: &str) -> String {
     assert!(!workspace_id.is_empty(), "workspace_id must not be empty");
     assert!(!conclusion_id.is_empty(), "conclusion_id must not be empty");
-    format!(
-        "/{API_BASE_PATH}/workspaces/{workspace_id}/conclusions/{conclusion_id}"
-    )
+    format!("/{API_BASE_PATH}/workspaces/{workspace_id}/conclusions/{conclusion_id}")
 }
 
 #[cfg(test)]
@@ -368,10 +332,7 @@ mod tests {
 
     #[test]
     fn test_session() {
-        assert_eq!(
-            session("ws1", "sess1"),
-            "/v3/workspaces/ws1/sessions/sess1"
-        );
+        assert_eq!(session("ws1", "sess1"), "/v3/workspaces/ws1/sessions/sess1");
     }
 
     #[test]

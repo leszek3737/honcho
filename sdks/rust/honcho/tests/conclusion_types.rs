@@ -71,18 +71,12 @@ fn conclusion_query_max_validates() {
 
 #[test]
 fn page_conclusion_min_validates() {
-    validate_openapi(
-        load_fixture("Page_Conclusion_", "min"),
-        "Page_Conclusion_",
-    );
+    validate_openapi(load_fixture("Page_Conclusion_", "min"), "Page_Conclusion_");
 }
 
 #[test]
 fn page_conclusion_max_validates() {
-    validate_openapi(
-        load_fixture("Page_Conclusion_", "max"),
-        "Page_Conclusion_",
-    );
+    validate_openapi(load_fixture("Page_Conclusion_", "max"), "Page_Conclusion_");
 }
 
 // ---------------------------------------------------------------------------

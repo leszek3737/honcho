@@ -65,7 +65,11 @@ fn reasoning_level_serde_roundtrip() {
     for lvl in levels {
         let v = serde_json::json!(lvl);
         let parsed: ReasoningLevel = serde_json::from_value(v.clone()).unwrap();
-        assert_eq!(serde_json::to_value(&parsed).unwrap(), v, "mismatch for {lvl}");
+        assert_eq!(
+            serde_json::to_value(&parsed).unwrap(),
+            v,
+            "mismatch for {lvl}"
+        );
     }
 }
 
