@@ -528,16 +528,7 @@ impl MessageBuilder {
     }
 
     /// Build the message params.
-    ///
-    /// # Errors
-    ///
-    /// Returns `HonchoError::Configuration` if content is only whitespace.
     pub fn build(self) -> Result<MessageCreate> {
-        if self.content.trim().is_empty() && !self.content.is_empty() {
-            return Err(HonchoError::Configuration(
-                "message content must not be only whitespace".to_owned(),
-            ));
-        }
         Ok(MessageCreate {
             peer_id: self.peer_id,
             content: self.content,

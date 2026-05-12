@@ -650,3 +650,22 @@ async fn paginate_post_with_reverse_param() {
     assert_eq!(page.items()[0].id, "zoe");
     assert!(!page.has_next());
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// F3.x — Page::map transforms items
+// ═══════════════════════════════════════════════════════════════════════
+#[tokio::test]
+async fn page_map_transforms_items() {
+    let peers = vec![
+        serde_json::from_value::<Peer>(peer_json("alice")).unwrap(),
+        serde_json::from_value::<Peer>(peer_json("bob")).unwrap(),
+    ];
+    let page = Page::new(peers, 2, 1, 50, 1);
+
+    let mapped: Page<Peer, String> = page.map(|p| p.id);
+
+    assert_eq!(mapped.items(), vec!["alice".to_string(), "bob".to_string()]);
+    assert_eq!(mapped.total(), 2);
+    assert_eq!(mapped.page(), 1);
+    assert_eq!(mapped.raw_items().len(), 2);
+}

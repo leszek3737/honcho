@@ -199,3 +199,51 @@ async fn session_search_validates_empty_query() {
     let err = session.search("").await.unwrap_err();
     assert_eq!(err.code(), "configuration_error");
 }
+
+// ── F6.9: Representation ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn session_representation_posts_to_peer_representation() {
+    let server = MockServer::start().await;
+    let session = make_session(&server).await;
+
+    Mock::given(method("POST"))
+        .and(path("/v3/workspaces/ws1/peers/alice/representation"))
+        .and(body_json(&json!({"session_id": "sess1"})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "representation": "Alice likes Rust"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let rep = session.representation("alice").await.unwrap();
+    assert_eq!(rep, "Alice likes Rust");
+}
+
+// ── F6.9: Queue Status ────────────────────────────────────────────────
+
+#[tokio::test]
+async fn session_queue_status_gets_with_session_id() {
+    let server = MockServer::start().await;
+    let session = make_session(&server).await;
+
+    Mock::given(method("GET"))
+        .and(path("/v3/workspaces/ws1/queue/status"))
+        .and(query_param("session_id", "sess1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "total_work_units": 5,
+            "completed_work_units": 3,
+            "in_progress_work_units": 1,
+            "pending_work_units": 1
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let status = session.queue_status().await.unwrap();
+    assert_eq!(status.total_work_units, 5);
+    assert_eq!(status.completed_work_units, 3);
+    assert_eq!(status.in_progress_work_units, 1);
+    assert_eq!(status.pending_work_units, 1);
+}

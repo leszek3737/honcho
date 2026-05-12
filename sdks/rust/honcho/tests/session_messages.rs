@@ -147,6 +147,81 @@ async fn add_messages_batch_under_100_one_request() {
 }
 
 #[tokio::test]
+async fn add_messages_exactly_100_is_one_request() {
+    let server = MockServer::start().await;
+    let session = make_session(&server).await;
+
+    let mut msgs = Vec::new();
+    let mut expected_response = Vec::new();
+    for i in 0..100 {
+        msgs.push(honcho_ai::types::message::MessageCreate {
+            content: format!("msg{i}"),
+            peer_id: "alice".to_string(),
+            metadata: None,
+            configuration: None,
+            created_at: None,
+        });
+        expected_response.push(message_json(&format!("m{i}"), &format!("msg{i}"), "alice"));
+    }
+
+    Mock::given(method("POST"))
+        .and(path("/v3/workspaces/ws1/sessions/sess1/messages"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(expected_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let result = session.add_messages(msgs).await.unwrap();
+    assert_eq!(result.len(), 100);
+    assert_eq!(result[0].id, "m0");
+    assert_eq!(result[99].id, "m99");
+}
+
+#[tokio::test]
+async fn add_messages_101_is_two_requests() {
+    let server = MockServer::start().await;
+    let session = make_session(&server).await;
+
+    let mut msgs = Vec::new();
+    let mut response_chunk1 = Vec::new();
+    let mut response_chunk2 = Vec::new();
+
+    for i in 0..101 {
+        msgs.push(honcho_ai::types::message::MessageCreate {
+            content: format!("msg{i}"),
+            peer_id: "alice".to_string(),
+            metadata: None,
+            configuration: None,
+            created_at: None,
+        });
+        if i < 100 {
+            response_chunk1.push(message_json(&format!("m{i}"), &format!("msg{i}"), "alice"));
+        } else {
+            response_chunk2.push(message_json(&format!("m{i}"), &format!("msg{i}"), "alice"));
+        }
+    }
+
+    Mock::given(method("POST"))
+        .and(path("/v3/workspaces/ws1/sessions/sess1/messages"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(response_chunk1))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/v3/workspaces/ws1/sessions/sess1/messages"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(response_chunk2))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+
+    let result = session.add_messages(msgs).await.unwrap();
+    assert_eq!(result.len(), 101);
+    assert_eq!(result[0].id, "m0");
+    assert_eq!(result[100].id, "m100");
+}
+
+#[tokio::test]
 async fn add_messages_batch_over_100_chunks() {
     let server = MockServer::start().await;
     let session = make_session(&server).await;

@@ -271,7 +271,7 @@ async fn peer_search_returns_messages() {
 }
 
 #[tokio::test]
-async fn peer_search_validates_limit_range() {
+async fn peer_search_returns_empty_vec() {
     let server = MockServer::start().await;
     let peer = make_peer(&server).await;
 
@@ -438,15 +438,12 @@ async fn peer_message_builder_fields() {
 }
 
 #[tokio::test]
-async fn peer_message_validates_whitespace_only() {
+async fn peer_message_whitespace_only_is_ok() {
     let server = MockServer::start().await;
     let peer = make_peer(&server).await;
 
-    let err = peer.message("   ").build().unwrap_err();
-    assert!(
-        format!("{err}").contains("whitespace"),
-        "expected whitespace error, got: {err}"
-    );
+    let msg = peer.message("   ").build().unwrap();
+    assert_eq!(msg.content, "   ");
 }
 
 #[tokio::test]
