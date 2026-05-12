@@ -37,3 +37,4 @@ pub mod types;
 
 pub use client::Honcho;
 pub use peer::Peer;
+pub use session::Session;
