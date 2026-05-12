@@ -1,0 +1,7 @@
+{
+  "file": "Large file content with multiple lines of text data for testing the upload form serialization path.",
+  "peer_id": "peer_upload",
+  "metadata": "{\"source\": \"upload\", \"format\": \"txt\"}",
+  "configuration": "{\"reasoning\": {\"enabled\": true}}",
+  "created_at": "2025-07-01T12:00:00Z"
+}
