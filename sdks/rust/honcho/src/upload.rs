@@ -59,7 +59,6 @@ impl From<&Path> for FileSource {
 /// For the `Path` variant the file is read, the filename is extracted from
 /// the final path component, and the MIME type is guessed from the extension
 /// (falling back to `application/octet-stream`).
-#[expect(dead_code)]
 pub(crate) async fn resolve_to_bytes(
     src: FileSource,
 ) -> std::io::Result<(String, Vec<u8>, String)> {

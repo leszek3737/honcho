@@ -1,4 +1,4 @@
-//! Conclusion wrapper — construction, display, and create params.
+//! Conclusion wrapper and scoped access.
 
 use std::fmt;
 use std::sync::Arc;
@@ -12,7 +12,6 @@ use crate::types::conclusion::Conclusion as ConclusionData;
 pub(crate) struct ConclusionInner {
     #[allow(dead_code)]
     http: HttpClient,
-    #[allow(dead_code)]
     workspace_id: String,
     id: String,
     content: String,
@@ -143,6 +142,60 @@ impl ConclusionCreateParams {
     }
 }
 
+pub(crate) struct ConclusionScopeInner {
+    #[allow(dead_code)]
+    http: HttpClient,
+    #[allow(dead_code)]
+    workspace_id: String,
+    #[allow(clippy::similar_names)]
+    observer: String,
+    #[allow(clippy::similar_names)]
+    observed: String,
+}
+
+/// Scoped access to conclusions for a specific observer/observed relationship.
+///
+/// Typically obtained via `peer.conclusions()` (self-scoped) or
+/// `peer.conclusions_of(target)` (cross-peer). Clone is cheap (Arc-backed).
+#[derive(Clone)]
+pub struct ConclusionScope {
+    inner: Arc<ConclusionScopeInner>,
+}
+
+impl ConclusionScope {
+    #[allow(dead_code, clippy::similar_names)]
+    pub(crate) fn new(
+        http: HttpClient,
+        workspace_id: String,
+        observer_id: String,
+        observed_id: String,
+    ) -> Self {
+        Self {
+            inner: Arc::new(ConclusionScopeInner {
+                http,
+                workspace_id,
+                observer: observer_id,
+                observed: observed_id,
+            }),
+        }
+    }
+
+    /// The observer peer ID for this scope.
+    #[must_use]
+    pub fn observer_id(&self) -> &str {
+        &self.inner.observer
+    }
+
+    /// The observed peer ID for this scope.
+    #[must_use]
+    pub fn observed_id(&self) -> &str {
+        &self.inner.observed
+    }
+}
+
+// TODO (F9.8): Peer::conclusions()       → ConclusionScope (observer=observed=self.id)
+// TODO (F9.8): Peer::conclusions_of(t)   → ConclusionScope (observed=target)
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -231,5 +284,62 @@ mod tests {
             session_id,
             created_at: chrono::Utc::now(),
         }
+    }
+
+    fn test_http() -> HttpClient {
+        HttpClient::from_params(
+            HttpClient::builder()
+                .base_url("http://localhost".to_owned())
+                .build(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn conclusion_scope_new_self_scoped() {
+        let scope = ConclusionScope::new(
+            test_http(),
+            "ws".to_owned(),
+            "p1".to_owned(),
+            "p1".to_owned(),
+        );
+        assert_eq!(scope.observer_id(), "p1");
+        assert_eq!(scope.observed_id(), "p1");
+    }
+
+    #[test]
+    fn conclusion_scope_with_different_target() {
+        let scope = ConclusionScope::new(
+            test_http(),
+            "ws".to_owned(),
+            "alice".to_owned(),
+            "bob".to_owned(),
+        );
+        assert_eq!(scope.observer_id(), "alice");
+        assert_eq!(scope.observed_id(), "bob");
+    }
+
+    #[test]
+    fn conclusion_scope_clone_is_cheap() {
+        let scope =
+            ConclusionScope::new(test_http(), "ws".to_owned(), "a".to_owned(), "b".to_owned());
+        let clone = scope.clone();
+        assert_eq!(Arc::strong_count(&scope.inner), 2);
+        assert_eq!(clone.observer_id(), "a");
+        assert_eq!(clone.observed_id(), "b");
+        drop(clone);
+        assert_eq!(Arc::strong_count(&scope.inner), 1);
+    }
+
+    #[test]
+    fn conclusion_scope_construction_basic() {
+        let scope = ConclusionScope::new(
+            test_http(),
+            "ws-99".to_owned(),
+            "observer".to_owned(),
+            "observed".to_owned(),
+        );
+        assert_eq!(scope.observer_id(), "observer");
+        assert_eq!(scope.observed_id(), "observed");
     }
 }

@@ -3,6 +3,7 @@
 //! Byte-stream level parser that handles split UTF-8 codepoints and split lines
 //! across arbitrary network chunk boundaries. Parity with Python `sse.py`.
 
+use futures_util::StreamExt;
 use serde_json::Value;
 
 /// Incremental SSE parser that extracts `delta.content` strings from a
@@ -16,7 +17,6 @@ pub(crate) struct SseParser {
     done: bool,
 }
 
-#[expect(dead_code)]
 impl SseParser {
     /// Create a new parser.
     pub fn new() -> Self {
@@ -180,6 +180,40 @@ impl SseParser {
 impl Default for SseParser {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[expect(dead_code)]
+pub(crate) fn parse_sse_stream(
+    stream: impl futures_util::Stream<Item = Result<bytes::Bytes, reqwest::Error>> + Send + 'static,
+) -> impl futures_util::Stream<Item = Result<String, crate::error::HonchoError>> + Send + 'static {
+    let mut parser = SseParser::new();
+    let mut stream: std::pin::Pin<
+        Box<dyn futures_util::Stream<Item = Result<bytes::Bytes, reqwest::Error>> + Send>,
+    > = Box::pin(stream);
+
+    async_stream::try_stream! {
+        while let Some(chunk_result) = stream.next().await {
+            match chunk_result {
+                Ok(chunk) => {
+                    for content in parser.feed(&chunk) {
+                        yield content;
+                    }
+                    if parser.done() {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    yield Err(crate::error::HonchoError::Connection {
+                        message: e.to_string(),
+                    })?;
+                }
+            }
+        }
+
+        for content in parser.finalize() {
+            yield content;
+        }
     }
 }
 
@@ -371,5 +405,89 @@ mod tests {
                       data: {\"delta\":{\"content\":\"b\"}}\n\n";
         let r = p.feed(input);
         assert_eq!(r, vec!["a", "b"]);
+    }
+
+    // ── parse_sse_stream tests (F8.3.1–F8.3.4) ──────────────────────────
+
+    fn data_line_bytes(json: &str) -> bytes::Bytes {
+        format!("data: {json}\n\n").into_bytes().into()
+    }
+
+    async fn collect_stream(
+        s: impl futures_util::Stream<Item = Result<String, crate::error::HonchoError>>,
+    ) -> Vec<Result<String, crate::error::HonchoError>> {
+        futures_util::StreamExt::collect(s).await
+    }
+
+    #[tokio::test]
+    async fn parse_sse_stream_yields_all_content_until_done() {
+        let chunks: Vec<Result<bytes::Bytes, reqwest::Error>> = vec![
+            Ok(data_line_bytes(r#"{"delta":{"content":"hello"}}"#)),
+            Ok(data_line_bytes(r#"{"delta":{"content":" world"}}"#)),
+            Ok(data_line_bytes(r#"{"delta":{"content":"!"}}"#)),
+        ];
+        let stream = futures_util::stream::iter(chunks);
+        let results = collect_stream(parse_sse_stream(stream)).await;
+
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].as_ref().unwrap(), "hello");
+        assert_eq!(results[1].as_ref().unwrap(), " world");
+        assert_eq!(results[2].as_ref().unwrap(), "!");
+    }
+
+    #[tokio::test]
+    async fn parse_sse_stream_terminates_on_done_flag_even_with_trailing_bytes() {
+        let chunks: Vec<Result<bytes::Bytes, reqwest::Error>> = vec![
+            Ok(data_line_bytes(r#"{"delta":{"content":"first"}}"#)),
+            Ok(data_line_bytes(r#"{"done":true}"#)),
+            Ok(data_line_bytes(r#"{"delta":{"content":"ignored"}}"#)),
+        ];
+        let stream = futures_util::stream::iter(chunks);
+        let results = collect_stream(parse_sse_stream(stream)).await;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].as_ref().unwrap(), "first");
+    }
+
+    #[tokio::test]
+    async fn parse_sse_stream_finalizes_on_eof() {
+        let partial: bytes::Bytes = b"data: {\"delta\":{\"content\":\"partial\"}}"
+            .to_vec()
+            .into();
+        let chunks: Vec<Result<bytes::Bytes, reqwest::Error>> = vec![Ok(partial)];
+        let stream = futures_util::stream::iter(chunks);
+        let results = collect_stream(parse_sse_stream(stream)).await;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].as_ref().unwrap(), "partial");
+    }
+
+    #[tokio::test]
+    async fn parse_sse_stream_propagates_io_error_from_byte_stream() {
+        let error = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_micros(1))
+            .build()
+            .unwrap()
+            .get("http://127.0.0.1:1")
+            .send()
+            .await
+            .unwrap_err();
+        let chunks: Vec<Result<bytes::Bytes, reqwest::Error>> = vec![
+            Ok(data_line_bytes(r#"{"delta":{"content":"before_err"}}"#)),
+            Err(error),
+        ];
+        let stream = futures_util::stream::iter(chunks);
+        let results = collect_stream(parse_sse_stream(stream)).await;
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].as_ref().unwrap(), "before_err");
+        assert!(
+            matches!(
+                results[1],
+                Err(crate::error::HonchoError::Connection { .. })
+            ),
+            "expected Connection error, got {:?}",
+            results[1]
+        );
     }
 }

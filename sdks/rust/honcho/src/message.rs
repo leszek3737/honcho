@@ -33,6 +33,22 @@ pub struct Message {
 }
 
 impl Message {
+    pub(crate) fn from_raw(http: HttpClient, workspace_id: String, resp: MessageResponse) -> Self {
+        Self {
+            inner: Arc::new(MessageInner {
+                http,
+                workspace_id,
+                id: resp.id,
+                content: resp.content,
+                peer_id: resp.peer_id,
+                session_id: resp.session_id,
+                metadata: resp.metadata,
+                created_at: resp.created_at,
+                token_count: resp.token_count,
+            }),
+        }
+    }
+
     #[allow(dead_code)]
     pub(crate) fn from_response(honcho: &crate::Honcho, resp: MessageResponse) -> Self {
         Self {

@@ -335,6 +335,11 @@ pub(crate) fn conclusion(workspace_id: &str, conclusion_id: &str) -> String {
     )
 }
 
+/// Builds path for deleting a specific conclusion.
+pub(crate) fn conclusion_delete(workspace_id: &str, conclusion_id: &str) -> String {
+    conclusion(workspace_id, conclusion_id)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]

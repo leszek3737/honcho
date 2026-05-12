@@ -42,8 +42,8 @@ pub mod types;
 pub mod upload;
 
 pub use client::Honcho;
-pub use conclusion::{Conclusion, ConclusionCreateParams};
+pub use conclusion::{Conclusion, ConclusionCreateParams, ConclusionScope};
 pub use message::Message;
 pub use peer::Peer;
-pub use session::Session;
+pub use session::{Session, UploadFileBuilder};
 pub use upload::FileSource;
