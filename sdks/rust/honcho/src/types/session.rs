@@ -209,7 +209,7 @@ impl SessionContext {
         if let Some(ref card) = self.peer_card {
             result.push(serde_json::json!({
                 "role": "system",
-                "content": format!("<peer_card>{card:?}</peer_card>"),
+                "content": format!("<peer_card>{}</peer_card>", serde_json::to_string(card).unwrap_or_default()),
             }));
         }
 
@@ -259,7 +259,7 @@ impl SessionContext {
         if let Some(ref card) = self.peer_card {
             result.push(serde_json::json!({
                 "role": "user",
-                "content": format!("<peer_card>{card:?}</peer_card>"),
+                "content": format!("<peer_card>{}</peer_card>", serde_json::to_string(card).unwrap_or_default()),
             }));
         }
 

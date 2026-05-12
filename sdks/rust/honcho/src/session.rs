@@ -95,17 +95,29 @@ struct PeersPageResponse {
 }
 
 impl Session {
-    pub(crate) fn from_response(honcho: &crate::Honcho, resp: SessionResponse) -> Self {
+    pub(crate) fn from_parts(
+        http: HttpClient,
+        workspace_id: String,
+        resp: SessionResponse,
+    ) -> Self {
         Self {
             inner: Arc::new(SessionInner {
-                http: honcho.http().clone(),
-                workspace_id: honcho.workspace_id().to_owned(),
+                http,
+                workspace_id,
                 id: resp.id,
                 is_active: AtomicBool::new(resp.is_active),
                 metadata: RwLock::new(Some(resp.metadata)),
                 configuration: RwLock::new(Some(resp.configuration)),
             }),
         }
+    }
+
+    pub(crate) fn from_response(honcho: &crate::Honcho, resp: SessionResponse) -> Self {
+        Self::from_parts(
+            honcho.http().clone(),
+            honcho.workspace_id().to_owned(),
+            resp,
+        )
     }
 
     /// The session's unique identifier.
@@ -122,22 +134,27 @@ impl Session {
 
     /// Cached metadata from the last API response.
     #[must_use]
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub fn metadata(&self) -> Option<HashMap<String, Value>> {
-        self.inner.metadata.read().unwrap().clone()
+        self.inner
+            .metadata
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     /// Cached configuration from the last API response.
     #[must_use]
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub fn configuration(&self) -> Option<HashMap<String, Value>> {
-        self.inner.configuration.read().unwrap().clone()
+        self.inner
+            .configuration
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     // ── F6.1: Refresh / Metadata / Configuration CRUD ──────────────────
 
     /// Refresh the session's cached metadata and configuration from the server.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn refresh(&self) -> Result<()> {
         let body = serde_json::json!({"id": self.inner.id});
         let resp: SessionResponse = self
@@ -152,26 +169,32 @@ impl Session {
         self.inner
             .is_active
             .store(resp.is_active, Ordering::Relaxed);
-        *self.inner.metadata.write().unwrap() = Some(resp.metadata);
-        *self.inner.configuration.write().unwrap() = Some(resp.configuration);
+        *self
+            .inner
+            .metadata
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.metadata);
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
         Ok(())
     }
 
     /// Fetch and return the session's metadata, updating the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn get_metadata(&self) -> Result<HashMap<String, Value>> {
         self.refresh().await?;
         Ok(self
             .inner
             .metadata
             .read()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone()
             .unwrap_or_default())
     }
 
     /// Set session metadata on the server and update the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn set_metadata(&self, metadata: HashMap<String, Value>) -> Result<()> {
         let body = serde_json::json!({"metadata": metadata});
         let resp: SessionResponse = self
@@ -183,25 +206,27 @@ impl Session {
                 &[],
             )
             .await?;
-        *self.inner.metadata.write().unwrap() = Some(resp.metadata);
+        *self
+            .inner
+            .metadata
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.metadata);
         Ok(())
     }
 
     /// Fetch and return session configuration, updating the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn get_configuration(&self) -> Result<HashMap<String, Value>> {
         self.refresh().await?;
         Ok(self
             .inner
             .configuration
             .read()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone()
             .unwrap_or_default())
     }
 
     /// Set session configuration on the server and update the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
         let body = serde_json::json!({"configuration": configuration});
         let resp: SessionResponse = self
@@ -213,7 +238,11 @@ impl Session {
                 &[],
             )
             .await?;
-        *self.inner.configuration.write().unwrap() = Some(resp.configuration);
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
         Ok(())
     }
 
@@ -264,12 +293,16 @@ impl Session {
     pub async fn peers(&self) -> Result<Vec<crate::Peer>> {
         let route = routes::session_peers(&self.inner.workspace_id, &self.inner.id);
         let page: PeersPageResponse = self.inner.http.get(&route, &[]).await?;
-        let honcho =
-            crate::Honcho::new(&self.inner.http.base_url_hint(), &self.inner.workspace_id)?;
         Ok(page
             .items
             .into_iter()
-            .map(|resp| crate::Peer::from_response(&honcho, resp))
+            .map(|resp| {
+                crate::Peer::from_parts(
+                    self.inner.http.clone(),
+                    self.inner.workspace_id.clone(),
+                    resp,
+                )
+            })
             .collect())
     }
 
@@ -353,8 +386,9 @@ impl Session {
     pub async fn clone_session(&self) -> Result<Session> {
         let route = routes::session_clone(&self.inner.workspace_id, &self.inner.id);
         let resp: SessionResponse = self.inner.http.post(&route, None::<&Value>, &[]).await?;
-        Ok(Self::from_response(
-            &crate::Honcho::new(&self.inner.http.base_url_hint(), &self.inner.workspace_id)?,
+        Ok(Self::from_parts(
+            self.inner.http.clone(),
+            self.inner.workspace_id.clone(),
             resp,
         ))
     }
@@ -367,8 +401,9 @@ impl Session {
             .http
             .post(&route, None::<&Value>, &[("message_id", message_id)])
             .await?;
-        Ok(Self::from_response(
-            &crate::Honcho::new(&self.inner.http.base_url_hint(), &self.inner.workspace_id)?,
+        Ok(Self::from_parts(
+            self.inner.http.clone(),
+            self.inner.workspace_id.clone(),
             resp,
         ))
     }

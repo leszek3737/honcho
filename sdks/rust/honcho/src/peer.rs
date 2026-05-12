@@ -41,16 +41,24 @@ struct ChatResponse {
 }
 
 impl Peer {
-    pub(crate) fn from_response(honcho: &crate::Honcho, resp: PeerResponse) -> Self {
+    pub(crate) fn from_parts(http: HttpClient, workspace_id: String, resp: PeerResponse) -> Self {
         Self {
             inner: Arc::new(PeerInner {
-                http: honcho.http().clone(),
-                workspace_id: honcho.workspace_id().to_owned(),
+                http,
+                workspace_id,
                 id: resp.id,
                 metadata: RwLock::new(Some(resp.metadata)),
                 configuration: RwLock::new(Some(resp.configuration)),
             }),
         }
+    }
+
+    pub(crate) fn from_response(honcho: &crate::Honcho, resp: PeerResponse) -> Self {
+        Self::from_parts(
+            honcho.http().clone(),
+            honcho.workspace_id().to_owned(),
+            resp,
+        )
     }
 
     // ── F5.1: Construction + Metadata ──────────────────────────────────
@@ -63,22 +71,27 @@ impl Peer {
 
     /// Cached metadata from the last API response.
     #[must_use]
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub fn metadata(&self) -> Option<HashMap<String, Value>> {
-        self.inner.metadata.read().unwrap().clone()
+        self.inner
+            .metadata
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     /// Cached configuration from the last API response.
     #[must_use]
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub fn configuration(&self) -> Option<HashMap<String, Value>> {
-        self.inner.configuration.read().unwrap().clone()
+        self.inner
+            .configuration
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     /// Refresh the peer's cached metadata and configuration from the server.
     ///
     /// POSTs to the peers get-or-create endpoint with `{"id": peer_id}`.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn refresh(&self) -> Result<()> {
         let body = serde_json::json!({"id": self.inner.id});
         let resp: PeerResponse = self
@@ -86,26 +99,32 @@ impl Peer {
             .http
             .post(&routes::peers(&self.inner.workspace_id), Some(&body), &[])
             .await?;
-        *self.inner.metadata.write().unwrap() = Some(resp.metadata);
-        *self.inner.configuration.write().unwrap() = Some(resp.configuration);
+        *self
+            .inner
+            .metadata
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.metadata);
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
         Ok(())
     }
 
     /// Fetch and return the peer's metadata, updating the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn get_metadata(&self) -> Result<HashMap<String, Value>> {
         self.refresh().await?;
         Ok(self
             .inner
             .metadata
             .read()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone()
             .unwrap_or_default())
     }
 
     /// Set the peer's metadata on the server and update the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn set_metadata(&self, metadata: HashMap<String, Value>) -> Result<()> {
         let body = serde_json::json!({"metadata": metadata});
         let resp: PeerResponse = self
@@ -117,25 +136,27 @@ impl Peer {
                 &[],
             )
             .await?;
-        *self.inner.metadata.write().unwrap() = Some(resp.metadata);
+        *self
+            .inner
+            .metadata
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.metadata);
         Ok(())
     }
 
     /// Fetch and return the peer's configuration, updating the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn get_configuration(&self) -> Result<HashMap<String, Value>> {
         self.refresh().await?;
         Ok(self
             .inner
             .configuration
             .read()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone()
             .unwrap_or_default())
     }
 
     /// Set the peer's configuration on the server and update the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
         let body = serde_json::json!({"configuration": configuration});
         let resp: PeerResponse = self
@@ -147,12 +168,15 @@ impl Peer {
                 &[],
             )
             .await?;
-        *self.inner.configuration.write().unwrap() = Some(resp.configuration);
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
         Ok(())
     }
 
     /// Patch-update the peer's metadata on the server and update the cache.
-    #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub async fn update(&self, metadata: HashMap<String, Value>) -> Result<()> {
         let body = serde_json::json!({"metadata": metadata});
         let resp: PeerResponse = self
@@ -164,7 +188,11 @@ impl Peer {
                 &[],
             )
             .await?;
-        *self.inner.metadata.write().unwrap() = Some(resp.metadata);
+        *self
+            .inner
+            .metadata
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.metadata);
         Ok(())
     }
 

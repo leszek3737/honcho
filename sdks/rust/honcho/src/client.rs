@@ -42,10 +42,6 @@ struct Inner {
     workspace_id: String,
     base_url: Url,
     ensure_workspace_once: OnceCell<()>,
-    #[allow(dead_code)]
-    metadata: std::sync::RwLock<Option<Value>>,
-    #[allow(dead_code)]
-    configuration: std::sync::RwLock<Option<Value>>,
 }
 
 /// Entry point for the Honcho SDK.
@@ -89,8 +85,6 @@ impl Honcho {
                 workspace_id: workspace_id.to_string(),
                 base_url: url,
                 ensure_workspace_once: OnceCell::new(),
-                metadata: std::sync::RwLock::new(None),
-                configuration: std::sync::RwLock::new(None),
             }),
         })
     }
@@ -133,8 +127,6 @@ impl Honcho {
                 workspace_id: resolved_workspace_id,
                 base_url,
                 ensure_workspace_once: OnceCell::new(),
-                metadata: std::sync::RwLock::new(None),
-                configuration: std::sync::RwLock::new(None),
             }),
         })
     }

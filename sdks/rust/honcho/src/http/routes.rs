@@ -1,9 +1,22 @@
 #![allow(dead_code)] // Phase 2 route helpers — consumed by Phase 3 high-level API
 
+use std::fmt::Write as _;
+
 pub(crate) const API_BASE_PATH: &str = "v3";
 
 fn encode(s: &str) -> String {
-    url::form_urlencoded::byte_serialize(s.as_bytes()).collect()
+    let mut encoded = String::with_capacity(s.len() * 3);
+    for byte in s.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(byte as char);
+            }
+            _ => {
+                let _ = write!(encoded, "%{byte:02X}");
+            }
+        }
+    }
+    encoded
 }
 
 /// Builds path for listing all workspaces.
