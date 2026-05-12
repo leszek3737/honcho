@@ -103,8 +103,8 @@ fn default_limit() -> u32 {
 /// required; the remaining fields are optional string-encoded payloads.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MessageUploadForm {
-    /// File contents (binary).
-    pub file: String,
+    /// Raw file contents as bytes.
+    pub file: Vec<u8>,
     /// ID of the peer uploading the file.
     pub peer_id: String,
     /// Optional JSON-encoded metadata string.

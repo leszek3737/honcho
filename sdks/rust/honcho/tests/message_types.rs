@@ -14,13 +14,15 @@ macro_rules! schema_tests {
             #[rstest]
             fn [<validate_ $schema:snake _min>]() {
                 let val = load_fixture($schema, "min");
-                let _: $type = serde_json::from_value(val).unwrap();
+                let _: $type = serde_json::from_value(val.clone()).unwrap();
+                validate_openapi(val, $schema);
             }
 
             #[rstest]
             fn [<validate_ $schema:snake _max>]() {
                 let val = load_fixture($schema, "max");
-                let _: $type = serde_json::from_value(val).unwrap();
+                let _: $type = serde_json::from_value(val.clone()).unwrap();
+                validate_openapi(val, $schema);
             }
 
             #[rstest]
@@ -48,8 +50,38 @@ mod message_schemas {
     schema_tests!(MessageGet, "MessageGet");
     schema_tests!(MessageConfiguration, "MessageConfiguration");
     schema_tests!(MessageSearchOptions, "MessageSearchOptions");
-    schema_tests!(MessageUploadForm, "MessageUploadForm");
-    schema_tests!(MessagePage, "Page_Message");
+}
+
+mod message_upload_form_roundtrip {
+    use super::*;
+
+    #[rstest]
+    fn roundtrip_message_upload_form_min() {
+        let val = load_fixture("MessageUploadForm", "min");
+        roundtrip::<MessageUploadForm>(val);
+    }
+
+    #[rstest]
+    fn roundtrip_message_upload_form_max() {
+        let val = load_fixture("MessageUploadForm", "max");
+        roundtrip::<MessageUploadForm>(val);
+    }
+}
+
+mod page_message_roundtrip {
+    use super::*;
+
+    #[rstest]
+    fn roundtrip_page_message_min() {
+        let val = load_fixture("Page_Message", "min");
+        roundtrip::<MessagePage>(val);
+    }
+
+    #[rstest]
+    fn roundtrip_page_message_max() {
+        let val = load_fixture("Page_Message", "max");
+        roundtrip::<MessagePage>(val);
+    }
 }
 
 #[test]

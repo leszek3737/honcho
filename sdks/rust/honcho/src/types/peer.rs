@@ -138,17 +138,4 @@ pub struct PeerRepresentationGet {
 }
 
 /// A page of [`Peer`] results from a paginated list endpoint.
-#[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PeerPage {
-    /// The peer items in this page.
-    pub items: Vec<Peer>,
-    /// Total number of peers matching the query.
-    pub total: u64,
-    /// Current page number (1-based).
-    pub page: u64,
-    /// Number of items per page.
-    pub size: u64,
-    /// Total number of pages.
-    pub pages: u64,
-}
+pub type PeerPage = super::pagination::Page<Peer>;

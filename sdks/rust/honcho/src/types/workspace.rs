@@ -119,17 +119,4 @@ pub struct WorkspaceGet {
 }
 
 /// A page of workspace results.
-#[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct WorkspacePage {
-    /// The workspace items in this page.
-    pub items: Vec<Workspace>,
-    /// Total number of items across all pages.
-    pub total: u64,
-    /// Current page number (1-based).
-    pub page: u64,
-    /// Number of items per page.
-    pub size: u64,
-    /// Total number of pages.
-    pub pages: u64,
-}
+pub type WorkspacePage = super::pagination::Page<Workspace>;

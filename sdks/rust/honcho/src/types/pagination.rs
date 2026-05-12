@@ -18,6 +18,7 @@ pub struct Page<T> {
 
 impl<T> Page<T> {
     /// Create a new `Page`.
+    #[must_use]
     pub fn new(items: Vec<T>, total: u64, page: u64, size: u64, pages: u64) -> Self {
         Self {
             items,

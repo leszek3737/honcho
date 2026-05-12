@@ -17,6 +17,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 const INITIAL_RETRY_DELAY: Duration = Duration::from_millis(500);
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(30);
 
+#[allow(dead_code)]
 struct Inner {
     client: reqwest::Client,
     base_url: Url,
@@ -28,6 +29,7 @@ struct Inner {
 
 #[derive(Clone)]
 #[doc(hidden)]
+#[allow(dead_code)]
 pub struct HttpClient {
     inner: Arc<Inner>,
 }
@@ -47,6 +49,7 @@ pub struct HttpClientParams {
     http_client: Option<reqwest::Client>,
 }
 
+#[allow(dead_code)]
 impl HttpClient {
     pub fn builder() -> HttpClientParamsBuilder {
         HttpClientParams::builder()
@@ -190,11 +193,11 @@ impl HttpClient {
             let is_retryable = matches!(status.as_u16(), 429 | 500 | 502 | 503 | 504);
 
             if is_retryable && attempt < self.inner.max_retries {
+                attempt += 1;
                 let retry_after = headers
                     .get("retry-after")
                     .and_then(|v| error::parse_retry_after(v, Utc::now()));
                 let delay = retry_after.unwrap_or_else(|| delay_for_attempt(attempt));
-                attempt += 1;
                 tokio::time::sleep(delay).await;
                 continue;
             }
