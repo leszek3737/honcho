@@ -334,8 +334,8 @@ impl Session {
     pub async fn add_messages(
         &self,
         messages: Vec<crate::types::message::MessageCreate>,
-    ) -> Result<Vec<crate::types::message::Message>> {
-        use crate::types::message::Message;
+    ) -> Result<Vec<crate::types::message::MessageResponse>> {
+        use crate::types::message::MessageResponse;
 
         if messages.is_empty() {
             return Ok(Vec::new());
@@ -348,14 +348,15 @@ impl Session {
             return self
                 .inner
                 .http
-                .post::<_, Vec<Message>>(&route, Some(&body), &[])
+                .post::<_, Vec<MessageResponse>>(&route, Some(&body), &[])
                 .await;
         }
 
         let mut all = Vec::with_capacity(messages.len());
         for chunk in messages.chunks(100) {
             let body = serde_json::json!({"messages": chunk});
-            let batch: Vec<Message> = self.inner.http.post(&route, Some(&body), &[]).await?;
+            let batch: Vec<MessageResponse> =
+                self.inner.http.post(&route, Some(&body), &[]).await?;
             all.extend(batch);
         }
         Ok(all)
@@ -364,7 +365,7 @@ impl Session {
     /// List messages in this session (paginated).
     pub async fn messages(
         &self,
-    ) -> Result<crate::types::pagination::Page<crate::types::message::Message>> {
+    ) -> Result<crate::types::pagination::Page<crate::types::message::MessageResponse>> {
         let route = routes::messages_list(&self.inner.workspace_id, &self.inner.id);
         crate::types::pagination::paginate_post(&self.inner.http, &route, None, 1, 50, false).await
     }
@@ -409,7 +410,7 @@ impl Session {
     }
 
     /// Get a single message by ID.
-    pub async fn get_message(&self, id: &str) -> Result<crate::types::message::Message> {
+    pub async fn get_message(&self, id: &str) -> Result<crate::types::message::MessageResponse> {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
         self.inner.http.get(&route, &[]).await
     }
@@ -419,7 +420,7 @@ impl Session {
         &self,
         id: &str,
         metadata: HashMap<String, Value>,
-    ) -> Result<crate::types::message::Message> {
+    ) -> Result<crate::types::message::MessageResponse> {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
         let body = serde_json::json!({"metadata": metadata});
         self.inner.http.put(&route, Some(&body), &[]).await
@@ -457,7 +458,7 @@ impl Session {
     /// Search messages within this session.
     ///
     /// Returns `Err(HonchoError::Configuration)` when `query` is empty.
-    pub async fn search(&self, query: &str) -> Result<Vec<crate::types::message::Message>> {
+    pub async fn search(&self, query: &str) -> Result<Vec<crate::types::message::MessageResponse>> {
         if query.is_empty() {
             return Err(crate::error::HonchoError::Configuration(
                 "query must not be empty".to_string(),

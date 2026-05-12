@@ -11,7 +11,7 @@ use crate::http::client::HttpClient;
 use crate::http::routes;
 use crate::types::dialectic::DialecticOptions;
 use crate::types::dialectic::RepresentationResponse;
-use crate::types::message::{Message, MessageCreate, MessageSearchOptions};
+use crate::types::message::{MessageCreate, MessageResponse, MessageSearchOptions};
 use crate::types::pagination::{self, Page};
 use crate::types::peer::Peer as PeerResponse;
 use crate::types::peer::{PeerCardResponse, PeerCardSet, PeerContext};
@@ -304,7 +304,7 @@ impl Peer {
     // ── Search ─────────────────────────────────────────────────────────
 
     /// Search messages for this peer.
-    pub async fn search(&self, query: &str) -> Result<Vec<Message>> {
+    pub async fn search(&self, query: &str) -> Result<Vec<MessageResponse>> {
         if query.is_empty() {
             return Err(HonchoError::Configuration(
                 "query must not be empty".to_string(),

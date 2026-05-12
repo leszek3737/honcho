@@ -353,6 +353,73 @@ impl HttpClient {
         ))
     }
 
+    pub(crate) async fn request_streaming(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&serde_json::Value>,
+        query: &[(&str, &str)],
+    ) -> Result<reqwest::Response> {
+        let url = self
+            .inner
+            .base_url
+            .join(path)
+            .map_err(|e| HonchoError::Configuration(format!("failed to join URL path: {e}")))?;
+
+        let merged_query: Vec<(&str, &str)> = self
+            .inner
+            .default_query
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .chain(query.iter().copied())
+            .collect();
+
+        let mut req_builder = self
+            .inner
+            .client
+            .request(method, url)
+            .headers(self.inner.default_headers.clone())
+            .header(ACCEPT, HeaderValue::from_static("text/event-stream"))
+            .query(&merged_query)
+            .timeout(self.inner.timeout);
+
+        if let Some(b) = body {
+            req_builder = req_builder.json(b);
+        }
+
+        let response = match req_builder.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(if e.is_timeout() {
+                    HonchoError::Timeout {
+                        message: e.to_string(),
+                    }
+                } else if e.is_connect() {
+                    HonchoError::Connection {
+                        message: e.to_string(),
+                    }
+                } else {
+                    HonchoError::Transport(e)
+                });
+            }
+        };
+
+        let status = response.status();
+
+        if status.is_success() {
+            return Ok(response);
+        }
+
+        let headers = response.headers().clone();
+        let body_bytes = response.bytes().await.unwrap_or_default();
+        Err(error::from_response(
+            status,
+            &headers,
+            &body_bytes,
+            Utc::now(),
+        ))
+    }
+
     pub(crate) async fn post_multipart<TResp: DeserializeOwned + 'static>(
         &self,
         path: &str,
@@ -1059,5 +1126,88 @@ mod tests {
             matches!(err, HonchoError::Server { status: 503, .. }),
             "expected Server(503), got {err:?}"
         );
+    }
+
+    // ── Streaming ────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn request_streaming_returns_response_on_200() {
+        let server = MockServer::start().await;
+        let client = make_client(&server).await;
+
+        let sse_body = "data: hello\n\ndata: world\n\n";
+
+        Mock::given(method("POST"))
+            .and(header("accept", "text/event-stream"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_string(sse_body)
+                    .insert_header("content-type", "text/event-stream"),
+            )
+            .mount(&server)
+            .await;
+
+        let response = client
+            .request_streaming(
+                Method::POST,
+                "/v3/workspaces/ws1/peers/alice/chat",
+                None,
+                &[],
+            )
+            .await
+            .unwrap();
+
+        assert!(response.status().is_success());
+        let bytes = response.bytes().await.unwrap();
+        assert_eq!(bytes, sse_body.as_bytes());
+    }
+
+    #[tokio::test]
+    async fn request_streaming_error_status_maps_to_honcho_error() {
+        let server = MockServer::start().await;
+        let client = make_client(&server).await;
+
+        Mock::given(method("POST"))
+            .respond_with(ResponseTemplate::new(422))
+            .mount(&server)
+            .await;
+
+        let err = client
+            .request_streaming(
+                Method::POST,
+                "/v3/workspaces/ws1/peers/alice/chat",
+                None,
+                &[],
+            )
+            .await
+            .unwrap_err();
+
+        assert!(
+            matches!(err, HonchoError::UnprocessableEntity { .. }),
+            "expected UnprocessableEntity, got {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn request_streaming_sends_accept_event_stream_header() {
+        let server = MockServer::start().await;
+        let client = make_client(&server).await;
+
+        Mock::given(method("POST"))
+            .and(header("accept", "text/event-stream"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("data: ok\n\n"))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let _response = client
+            .request_streaming(
+                Method::POST,
+                "/v3/workspaces/ws1/peers/alice/chat",
+                None,
+                &[],
+            )
+            .await
+            .unwrap();
     }
 }

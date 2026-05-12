@@ -26,15 +26,24 @@
 
 /// High-level Honcho client.
 pub mod client;
+/// Conclusion wrapper type.
+pub mod conclusion;
 pub mod error;
 pub mod http;
+/// Message wrapper type.
+pub mod message;
 /// Peer wrapper type.
 pub mod peer;
 /// Session wrapper type.
 pub mod session;
 /// Shared types for the Honcho SDK.
 pub mod types;
+/// File source abstraction for uploads.
+pub mod upload;
 
 pub use client::Honcho;
+pub use conclusion::{Conclusion, ConclusionCreateParams};
+pub use message::Message;
 pub use peer::Peer;
 pub use session::Session;
+pub use upload::FileSource;
