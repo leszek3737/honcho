@@ -18,11 +18,11 @@ pub struct Session {
     /// The workspace this session belongs to.
     pub workspace_id: String,
     /// Arbitrary key-value metadata attached to the session.
-    #[serde(default)]
-    pub metadata: serde_json::Value,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub metadata: HashMap<String, serde_json::Value>,
     /// Session-level configuration overrides.
-    #[serde(default)]
-    pub configuration: serde_json::Value,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub configuration: HashMap<String, serde_json::Value>,
     /// When the session was created.
     pub created_at: DateTime<Utc>,
 }
@@ -34,7 +34,7 @@ pub struct SessionCreate {
     pub id: String,
     /// Optional metadata to attach.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<HashMap<String, serde_json::Value>>,
     /// Peer configurations keyed by peer ID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peers: Option<HashMap<String, SessionPeerConfig>>,
@@ -48,7 +48,7 @@ pub struct SessionCreate {
 pub struct SessionUpdate {
     /// Updated metadata (replaces existing).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<HashMap<String, serde_json::Value>>,
     /// Updated session configuration (merges with existing).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub configuration: Option<SessionConfiguration>,
@@ -59,7 +59,7 @@ pub struct SessionUpdate {
 pub struct SessionGet {
     /// Filter criteria for sessions.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub filters: Option<serde_json::Value>,
+    pub filters: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Session-level configuration overrides.

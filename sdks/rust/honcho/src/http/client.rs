@@ -288,6 +288,76 @@ impl HttpClient {
         self.request::<(), TResp>(Method::DELETE, path, None, query)
             .await
     }
+
+    pub(crate) async fn request_multipart<TResp: DeserializeOwned + 'static>(
+        &self,
+        method: Method,
+        path: &str,
+        form: reqwest::multipart::Form,
+        query: &[(String, String)],
+    ) -> Result<TResp> {
+        let url = self
+            .inner
+            .base_url
+            .join(path)
+            .map_err(|e| HonchoError::Configuration(format!("failed to join URL path: {e}")))?;
+
+        let merged_query: Vec<(&str, &str)> = self
+            .inner
+            .default_query
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .chain(query.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+            .collect();
+
+        let req_builder = self
+            .inner
+            .client
+            .request(method, url)
+            .headers(self.inner.default_headers.clone())
+            .query(&merged_query)
+            .timeout(self.inner.timeout)
+            .multipart(form);
+
+        let response = req_builder.send().await.map_err(|e| {
+            if e.is_timeout() {
+                HonchoError::Timeout {
+                    message: e.to_string(),
+                }
+            } else if e.is_connect() {
+                HonchoError::Connection {
+                    message: e.to_string(),
+                }
+            } else {
+                HonchoError::Transport(e)
+            }
+        })?;
+
+        let status = response.status();
+
+        if status.is_success() {
+            return self.handle_success_response(response).await;
+        }
+
+        let headers = response.headers().clone();
+        let body_bytes = response.bytes().await.unwrap_or_default();
+        Err(error::from_response(
+            status,
+            &headers,
+            &body_bytes,
+            Utc::now(),
+        ))
+    }
+
+    pub(crate) async fn post_multipart<TResp: DeserializeOwned + 'static>(
+        &self,
+        path: &str,
+        form: reqwest::multipart::Form,
+        query: &[(String, String)],
+    ) -> Result<TResp> {
+        self.request_multipart(Method::POST, path, form, query)
+            .await
+    }
 }
 
 #[doc(hidden)]
@@ -912,5 +982,78 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result.id, "ws_abc123");
+    }
+
+    // ── Multipart ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn post_multipart_sends_form_data() {
+        let server = MockServer::start().await;
+        let client = make_client(&server).await;
+
+        Mock::given(method("POST"))
+            .and(path("/v3/upload"))
+            .and(wiremock::matchers::body_string_contains("field_value"))
+            .and(wiremock::matchers::body_string_contains("test upload"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(workspace_json()))
+            .mount(&server)
+            .await;
+
+        let form = reqwest::multipart::Form::new()
+            .text("field_name", "field_value")
+            .text("description", "test upload");
+
+        let result: Workspace = client
+            .post_multipart("/v3/upload", form, &[])
+            .await
+            .unwrap();
+        assert_eq!(result.id, "ws_abc123");
+    }
+
+    #[tokio::test]
+    async fn post_multipart_with_query_params() {
+        let server = MockServer::start().await;
+        let client = make_client(&server).await;
+
+        Mock::given(method("POST"))
+            .and(path("/v3/upload"))
+            .and(query_param("workspace_id", "ws1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(workspace_json()))
+            .mount(&server)
+            .await;
+
+        let form = reqwest::multipart::Form::new().text("key", "value");
+
+        let result: Workspace = client
+            .post_multipart(
+                "/v3/upload",
+                form,
+                &[("workspace_id".to_string(), "ws1".to_string())],
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.id, "ws_abc123");
+    }
+
+    #[tokio::test]
+    async fn post_multipart_server_error_returns_error() {
+        let server = MockServer::start().await;
+        let client = make_client(&server).await;
+
+        Mock::given(method("POST"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+
+        let form = reqwest::multipart::Form::new().text("key", "value");
+
+        let err = client
+            .post_multipart::<Workspace>("/v3/upload", form, &[])
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, HonchoError::Server { status: 503, .. }),
+            "expected Server(503), got {err:?}"
+        );
     }
 }

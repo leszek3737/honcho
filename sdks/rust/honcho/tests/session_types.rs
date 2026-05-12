@@ -92,7 +92,7 @@ fn session_create_builder_full() {
 
     let created = SessionCreate::builder()
         .id("full-session".to_string())
-        .metadata(serde_json::json!({"env": "test"}))
+        .metadata(serde_json::from_value(serde_json::json!({"env": "test"})).unwrap())
         .peers(peers)
         .configuration(config)
         .build();
