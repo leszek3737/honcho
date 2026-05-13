@@ -1,4 +1,10 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::redundant_closure_for_method_calls,
+    missing_docs
+)]
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -66,7 +72,7 @@ async fn full_lifecycle() {
         .unwrap();
 
     let peers = session.peers().await.unwrap();
-    let peer_id_set: HashSet<&str> = peers.iter().map(|p| p.id()).collect();
+    let peer_id_set: HashSet<&str> = peers.iter().map(honcho_ai::Peer::id).collect();
     assert_eq!(
         peer_id_set,
         HashSet::from(["lifecycle-alice", "lifecycle-bob"])

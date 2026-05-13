@@ -46,14 +46,16 @@ fn normalize_peer_card(val: &mut serde_json::Value) {
         if let Ok(parsed) = serde_json::from_str::<Vec<String>>(inner) {
             val["content"] = serde_json::Value::String(format!(
                 "<peer_card>{}</peer_card>",
-                serde_json::to_string(&parsed).unwrap()
+                serde_json::to_string(&parsed)
+                    .expect("re-serializing parsed JSON should not fail")
             ));
         } else {
             let fixed = inner.replace('\'', "\"");
             if let Ok(parsed) = serde_json::from_str::<Vec<String>>(&fixed) {
                 val["content"] = serde_json::Value::String(format!(
                     "<peer_card>{}</peer_card>",
-                    serde_json::to_string(&parsed).unwrap()
+                    serde_json::to_string(&parsed)
+                        .expect("re-serializing parsed JSON should not fail")
                 ));
             }
         }

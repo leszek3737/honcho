@@ -75,9 +75,15 @@ where
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unnecessary_wraps,
+    clippy::needless_pass_by_value,
+    clippy::unused_async
+)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
-
     use futures_util::StreamExt;
 
     use super::*;

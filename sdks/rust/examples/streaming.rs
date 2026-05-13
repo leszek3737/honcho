@@ -1,4 +1,4 @@
-//! Streaming dialectic: chat_stream with stdout drain.
+//! Streaming dialectic: `chat_stream` with stdout drain.
 //!
 //! Run with `cargo run --example streaming`
 

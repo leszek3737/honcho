@@ -282,11 +282,7 @@ mod tests {
         full.extend_from_slice("\u{00e9}".as_bytes());
         full.extend_from_slice(b"\"}}\n\n");
 
-        let split_pos = full
-            .iter()
-            .position(|&b| b == 0xC3)
-            .map(|p| p + 1)
-            .unwrap_or(0);
+        let split_pos = full.iter().position(|&b| b == 0xC3).map_or(0, |p| p + 1);
 
         let mut p = SseParser::new();
         let mut results = Vec::new();

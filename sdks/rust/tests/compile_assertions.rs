@@ -1,3 +1,5 @@
+#![allow(clippy::used_underscore_items)]
+
 use std::fmt::Display;
 
 use honcho_ai::http::client::HttpClient;

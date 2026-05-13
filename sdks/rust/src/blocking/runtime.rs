@@ -4,13 +4,13 @@ use tokio::runtime::{Handle, Runtime};
 
 static RUNTIME: OnceLock<Runtime> = OnceLock::new();
 
+#[expect(clippy::expect_used)]
 fn get_or_create_runtime() -> &'static Runtime {
-    RUNTIME.get_or_init(|| match Runtime::new() {
-        Ok(rt) => rt,
-        Err(e) => {
-            eprintln!("failed to create tokio runtime: {e}");
-            std::process::exit(1);
-        }
+    RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to create honcho-ai blocking runtime")
     })
 }
 

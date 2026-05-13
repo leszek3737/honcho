@@ -30,13 +30,17 @@ where
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 pub(crate) async fn collect_all_pages<T: Clone + Send + 'static>(
     first_page: crate::types::pagination::Page<T>,
 ) -> Vec<T> {
-    let mut all = first_page.items();
+    let mut all = Vec::with_capacity(first_page.total() as usize);
+    let mut first_items = first_page.items();
+    all.append(&mut first_items);
     let mut current = first_page;
     while let Some(next) = current.next_page().await {
-        all.extend(next.items());
+        let mut next_items = next.items();
+        all.append(&mut next_items);
         current = next;
     }
     all

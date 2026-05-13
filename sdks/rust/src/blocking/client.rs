@@ -157,12 +157,16 @@ impl Honcho {
     }
 
     /// List all workspace IDs, collecting across pages.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn workspaces(&self) -> Result<Vec<String>> {
         block_on(async {
             let mut page = self.inner.workspaces().await?;
-            let mut all = page.items();
+            let mut all = Vec::with_capacity(page.total() as usize);
+            let mut first_items = page.items();
+            all.append(&mut first_items);
             while let Some(next) = page.next_page().await {
-                all.extend(next.items());
+                let mut next_items = next.items();
+                all.append(&mut next_items);
                 page = next;
             }
             Ok(all)

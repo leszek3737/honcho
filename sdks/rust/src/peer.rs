@@ -703,6 +703,14 @@ impl MessageBuilder {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unnecessary_wraps,
+    clippy::needless_pass_by_value,
+    clippy::unused_async
+)]
 mod tests {
     use super::*;
     use std::pin::Pin;

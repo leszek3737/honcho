@@ -89,7 +89,10 @@ async fn malformed_json_mid_stream_no_panic() {
     let s = parse_sse_stream(resp.bytes_stream());
     let results: Vec<Result<String, HonchoError>> = s.collect().await;
 
-    let ok_results: Vec<String> = results.into_iter().filter_map(|r| r.ok()).collect();
+    let ok_results: Vec<String> = results
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+        .collect();
 
     assert!(
         ok_results.contains(&"good_before".to_string()),
