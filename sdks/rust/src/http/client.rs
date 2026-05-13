@@ -190,25 +190,22 @@ impl HttpClient {
             }
 
             let headers = response.headers().clone();
-            let body_bytes = match response.bytes().await {
-                Ok(b) => b,
-                Err(_) => {
-                    let msg = format!(
-                        "request failed with status {} (could not read response body)",
-                        status.as_u16()
-                    );
-                    return Err(if status.is_server_error() {
-                        HonchoError::Server {
-                            status: status.as_u16(),
-                            message: msg,
-                        }
-                    } else {
-                        HonchoError::Client {
-                            status: status.as_u16(),
-                            message: msg,
-                        }
-                    });
-                }
+            let Ok(body_bytes) = response.bytes().await else {
+                let msg = format!(
+                    "request failed with status {} (could not read response body)",
+                    status.as_u16()
+                );
+                return Err(if status.is_server_error() {
+                    HonchoError::Server {
+                        status: status.as_u16(),
+                        message: msg,
+                    }
+                } else {
+                    HonchoError::Client {
+                        status: status.as_u16(),
+                        message: msg,
+                    }
+                });
             };
             let api_error = error::from_response(status, &headers, &body_bytes, Utc::now());
 

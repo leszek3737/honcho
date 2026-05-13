@@ -14,7 +14,9 @@ jobs:
         working-directory: sdks/rust
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.80
+      - uses: dtolnay/rust-toolchain@1.85
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: 'sdks/rust'
@@ -45,7 +47,7 @@ jobs:
         working-directory: sdks/rust
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.80
+      - uses: dtolnay/rust-toolchain@1.85
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: 'sdks/rust'
