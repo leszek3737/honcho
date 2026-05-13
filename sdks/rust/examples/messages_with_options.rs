@@ -53,8 +53,8 @@ async fn main() -> honcho_ai::error::Result<()> {
     if let Some(first) = created.first() {
         let mut update_meta = HashMap::new();
         update_meta.insert("reviewed".into(), true.into());
-        let updated = session.update_message(&first.id, update_meta).await?;
-        println!("Updated message {}", updated.id);
+        let updated = session.update_message(first.id(), update_meta).await?;
+        println!("Updated message {}", updated.id());
     }
 
     Ok(())

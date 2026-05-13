@@ -59,7 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- MSRV raised to 1.80
+- MSRV raised to 1.88
 - All `bon::Builder` structs use `finish_fn = build` for consistency
 - Error type provides `code()` method returning machine-readable string identifiers
 
@@ -73,7 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - No webhooks or API keys endpoints
 - No automatic SSE reconnection
-- MSRV 1.80
+- MSRV 1.88
 
 ## [0.1.0] - 2025-05-13
 

@@ -6,7 +6,6 @@ use url::Url;
 use crate::client::HonchoParams;
 use crate::error::Result;
 use crate::types::dream::QueueStatus;
-use crate::types::message::MessageResponse;
 use crate::types::peer::Peer as PeerResponse;
 use crate::types::session::Session as SessionResponse;
 use crate::types::workspace::WorkspaceConfiguration;
@@ -68,7 +67,7 @@ impl Honcho {
     }
 
     /// Search messages across the workspace.
-    pub fn search(&self, query: &str) -> Result<Vec<MessageResponse>> {
+    pub fn search(&self, query: &str) -> Result<Vec<crate::Message>> {
         block_on(self.inner.search(query))
     }
 

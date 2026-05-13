@@ -612,13 +612,13 @@ impl Peer {
     /// # async fn example(peer: &honcho_ai::Peer) -> honcho_ai::error::Result<()> {
     /// let results = peer.search("important topic").await?;
     /// for msg in results {
-    ///     println!("{}", msg.content);
+    ///     println!("{}", msg.content());
     /// }
     /// # Ok(())
     /// # }
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(peer_id = self.inner.id.as_str())))]
-    pub async fn search(&self, query: &str) -> Result<Vec<MessageResponse>> {
+    pub async fn search(&self, query: &str) -> Result<Vec<crate::Message>> {
         self.search_with_options(&MessageSearchOptions {
             query: query.to_string(),
             filters: None,
@@ -647,20 +647,31 @@ impl Peer {
     pub async fn search_with_options(
         &self,
         options: &MessageSearchOptions,
-    ) -> Result<Vec<MessageResponse>> {
+    ) -> Result<Vec<crate::Message>> {
         if options.query.is_empty() {
             return Err(HonchoError::Validation(
                 "query must not be empty".to_string(),
             ));
         }
-        self.inner
+        let responses: Vec<MessageResponse> = self
+            .inner
             .http
             .post(
                 &routes::peer_search(&self.inner.workspace_id, &self.inner.id),
                 Some(&options),
                 &[],
             )
-            .await
+            .await?;
+        Ok(responses
+            .into_iter()
+            .map(|r| {
+                crate::Message::from_raw(
+                    self.inner.http.clone(),
+                    self.inner.workspace_id.clone(),
+                    r,
+                )
+            })
+            .collect())
     }
 
     // ── Card ───────────────────────────────────────────────────────────

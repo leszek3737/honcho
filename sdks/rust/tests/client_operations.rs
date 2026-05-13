@@ -9,7 +9,6 @@
 
 use honcho_ai::client::Honcho;
 use honcho_ai::types::dream::QueueStatus;
-use honcho_ai::types::message::MessageResponse;
 use wiremock::matchers::{body_json, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -76,10 +75,10 @@ async fn search_returns_messages() {
         .mount(&server)
         .await;
 
-    let results: Vec<MessageResponse> = honcho.search("hello").await.unwrap();
+    let results = honcho.search("hello").await.unwrap();
     assert_eq!(results.len(), 2);
-    assert_eq!(results[0].id, "m1");
-    assert_eq!(results[1].id, "m2");
+    assert_eq!(results[0].id(), "m1");
+    assert_eq!(results[1].id(), "m2");
 }
 
 #[tokio::test]

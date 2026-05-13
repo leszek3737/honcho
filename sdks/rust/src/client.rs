@@ -365,17 +365,28 @@ impl Honcho {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn search(&self, query: &str) -> Result<Vec<MessageResponse>> {
+    pub async fn search(&self, query: &str) -> Result<Vec<crate::Message>> {
         self.ensure_workspace().await?;
         let body = serde_json::json!({"query": query, "limit": 10});
-        self.inner
+        let responses: Vec<MessageResponse> = self
+            .inner
             .http
             .post(
                 &routes::workspace_search(&self.inner.workspace_id),
                 Some(&body),
                 &[],
             )
-            .await
+            .await?;
+        Ok(responses
+            .into_iter()
+            .map(|r| {
+                crate::Message::from_raw(
+                    self.inner.http.clone(),
+                    self.inner.workspace_id.clone(),
+                    r,
+                )
+            })
+            .collect())
     }
 
     /// Get queue processing status.

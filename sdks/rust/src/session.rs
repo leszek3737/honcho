@@ -13,6 +13,7 @@ use serde_json::Value;
 use crate::error::{HonchoError, Result};
 use crate::http::client::HttpClient;
 use crate::http::routes;
+use crate::message::Message;
 use crate::types::message::MessageResponse;
 use crate::types::session::Session as SessionResponse;
 use crate::types::session::SessionPeerConfig;
@@ -678,32 +679,31 @@ impl Session {
     pub async fn add_messages(
         &self,
         messages: Vec<crate::types::message::MessageCreate>,
-    ) -> Result<Vec<crate::types::message::MessageResponse>> {
-        use crate::types::message::MessageResponse;
-
+    ) -> Result<Vec<Message>> {
         if messages.is_empty() {
             return Ok(Vec::new());
         }
 
         let route = routes::messages(&self.inner.workspace_id, &self.inner.id);
 
-        if messages.len() <= 100 {
+        let responses: Vec<MessageResponse> = if messages.len() <= 100 {
             let body = serde_json::json!({"messages": messages});
-            return self
-                .inner
-                .http
-                .post::<_, Vec<MessageResponse>>(&route, Some(&body), &[])
-                .await;
-        }
+            self.inner.http.post(&route, Some(&body), &[]).await?
+        } else {
+            let mut all = Vec::with_capacity(messages.len());
+            for chunk in messages.chunks(100) {
+                let body = serde_json::json!({"messages": chunk});
+                let batch: Vec<MessageResponse> =
+                    self.inner.http.post(&route, Some(&body), &[]).await?;
+                all.extend(batch);
+            }
+            all
+        };
 
-        let mut all = Vec::with_capacity(messages.len());
-        for chunk in messages.chunks(100) {
-            let body = serde_json::json!({"messages": chunk});
-            let batch: Vec<MessageResponse> =
-                self.inner.http.post(&route, Some(&body), &[]).await?;
-            all.extend(batch);
-        }
-        Ok(all)
+        Ok(responses
+            .into_iter()
+            .map(|r| Message::from_raw(self.inner.http.clone(), self.inner.workspace_id.clone(), r))
+            .collect())
     }
 
     /// List messages in this session (paginated).
@@ -714,16 +714,30 @@ impl Session {
     /// # async fn example(session: &honcho_ai::Session) -> honcho_ai::error::Result<()> {
     /// let page = session.messages().await?;
     /// for msg in page.items() {
-    ///     println!("{}", msg.content);
+    ///     println!("{}", msg.content());
     /// }
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn messages(
-        &self,
-    ) -> Result<crate::types::pagination::Page<crate::types::message::MessageResponse>> {
+    pub async fn messages(&self) -> Result<crate::types::pagination::Page<Message>> {
         let route = routes::messages_list(&self.inner.workspace_id, &self.inner.id);
-        crate::types::pagination::paginate_post(&self.inner.http, &route, None, 1, 50, false).await
+        let page: crate::types::pagination::Page<MessageResponse> =
+            crate::types::pagination::paginate_post(&self.inner.http, &route, None, 1, 50, false)
+                .await?;
+        let http = self.inner.http.clone();
+        let ws = self.inner.workspace_id.clone();
+        let messages: Vec<Message> = page
+            .items()
+            .into_iter()
+            .map(|r| Message::from_raw(http.clone(), ws.clone(), r))
+            .collect();
+        Ok(crate::types::pagination::Page::new(
+            messages,
+            page.total(),
+            page.page(),
+            page.size(),
+            page.pages(),
+        ))
     }
 
     // ── F7.3: File upload ───────────────────────────────────────────────
@@ -853,14 +867,19 @@ impl Session {
     /// ```no_run
     /// # async fn example(session: &honcho_ai::Session) -> honcho_ai::error::Result<()> {
     /// let msg = session.get_message("msg-1").await?;
-    /// println!("{}", msg.content);
+    /// println!("{}", msg.content());
     /// # Ok(())
     /// # }
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(session_id = self.inner.id.as_str())))]
-    pub async fn get_message(&self, id: &str) -> Result<crate::types::message::MessageResponse> {
+    pub async fn get_message(&self, id: &str) -> Result<Message> {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
-        self.inner.http.get(&route, &[]).await
+        let resp: MessageResponse = self.inner.http.get(&route, &[]).await?;
+        Ok(Message::from_raw(
+            self.inner.http.clone(),
+            self.inner.workspace_id.clone(),
+            resp,
+        ))
     }
 
     /// Update a message's metadata.
@@ -880,10 +899,15 @@ impl Session {
         &self,
         id: &str,
         metadata: HashMap<String, Value>,
-    ) -> Result<crate::types::message::MessageResponse> {
+    ) -> Result<Message> {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
         let body = serde_json::json!({"metadata": metadata});
-        self.inner.http.put(&route, Some(&body), &[]).await
+        let resp: MessageResponse = self.inner.http.put(&route, Some(&body), &[]).await?;
+        Ok(Message::from_raw(
+            self.inner.http.clone(),
+            self.inner.workspace_id.clone(),
+            resp,
+        ))
     }
 
     // ── F6.6: Context ───────────────────────────────────────────────────
@@ -1006,13 +1030,13 @@ impl Session {
     /// # async fn example(session: &honcho_ai::Session) -> honcho_ai::error::Result<()> {
     /// let results = session.search("important topic").await?;
     /// for msg in results {
-    ///     println!("{}", msg.content);
+    ///     println!("{}", msg.content());
     /// }
     /// # Ok(())
     /// # }
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(session_id = self.inner.id.as_str())))]
-    pub async fn search(&self, query: &str) -> Result<Vec<crate::types::message::MessageResponse>> {
+    pub async fn search(&self, query: &str) -> Result<Vec<Message>> {
         self.search_with_options(&crate::types::message::MessageSearchOptions {
             query: query.to_string(),
             filters: None,
@@ -1039,14 +1063,19 @@ impl Session {
     pub async fn search_with_options(
         &self,
         options: &crate::types::message::MessageSearchOptions,
-    ) -> Result<Vec<crate::types::message::MessageResponse>> {
+    ) -> Result<Vec<Message>> {
         if options.query.is_empty() {
             return Err(crate::error::HonchoError::Validation(
                 "query must not be empty".to_string(),
             ));
         }
         let route = routes::session_search(&self.inner.workspace_id, &self.inner.id);
-        self.inner.http.post(&route, Some(&options), &[]).await
+        let responses: Vec<MessageResponse> =
+            self.inner.http.post(&route, Some(&options), &[]).await?;
+        Ok(responses
+            .into_iter()
+            .map(|r| Message::from_raw(self.inner.http.clone(), self.inner.workspace_id.clone(), r))
+            .collect())
     }
 
     /// Get a peer's representation scoped to this session.

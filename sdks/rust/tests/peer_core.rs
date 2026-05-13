@@ -273,8 +273,8 @@ async fn peer_search_returns_messages() {
 
     let results = peer.search("hello").await.unwrap();
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].id, "msg1");
-    assert_eq!(results[0].content, "hello world");
+    assert_eq!(results[0].id(), "msg1");
+    assert_eq!(results[0].content(), "hello world");
 }
 
 #[tokio::test]

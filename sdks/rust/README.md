@@ -221,7 +221,7 @@ These APIs have no equivalent in the Python/TypeScript SDKs:
 
 ## MSRV
 
-1.80
+1.88
 
 ## Parity with Python SDK
 

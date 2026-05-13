@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::error::Result;
 use crate::types::dialectic::{DialecticOptions, ReasoningLevel};
-use crate::types::message::{MessageResponse, MessageSearchOptions};
+use crate::types::message::MessageSearchOptions;
 use crate::types::peer::PeerContext;
 use crate::types::session::Session;
 
@@ -131,7 +131,7 @@ impl Peer {
     }
 
     /// Search messages for this peer.
-    pub fn search(&self, query: &str) -> Result<Vec<MessageResponse>> {
+    pub fn search(&self, query: &str) -> Result<Vec<crate::Message>> {
         block_on(self.inner.search(query))
     }
 
@@ -139,7 +139,7 @@ impl Peer {
     pub fn search_with_options(
         &self,
         options: &MessageSearchOptions,
-    ) -> Result<Vec<MessageResponse>> {
+    ) -> Result<Vec<crate::Message>> {
         block_on(self.inner.search_with_options(options))
     }
 
