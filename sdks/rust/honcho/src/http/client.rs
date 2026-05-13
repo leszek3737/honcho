@@ -17,7 +17,6 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 const INITIAL_RETRY_DELAY: Duration = Duration::from_millis(500);
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(30);
 
-#[allow(dead_code)]
 struct Inner {
     client: reqwest::Client,
     base_url: Url,
@@ -29,7 +28,6 @@ struct Inner {
 
 #[derive(Clone)]
 #[doc(hidden)]
-#[allow(dead_code)]
 pub struct HttpClient {
     inner: Arc<Inner>,
 }
@@ -49,12 +47,12 @@ pub struct HttpClientParams {
     http_client: Option<reqwest::Client>,
 }
 
-#[allow(dead_code)]
 impl HttpClient {
     pub fn builder() -> HttpClientParamsBuilder {
         HttpClientParams::builder()
     }
 
+    #[expect(dead_code)]
     pub(crate) fn base_url_hint(&self) -> String {
         self.inner.base_url.to_string()
     }

@@ -9,6 +9,7 @@ use reqwest::Method;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::conclusion::ConclusionScope;
 use crate::error::{HonchoError, Result};
 use crate::http::client::HttpClient;
 use crate::http::routes;
@@ -413,6 +414,30 @@ impl Peer {
         self.get_card().await
     }
 
+    // ── F9.8: Conclusions ──────────────────────────────────────────────
+
+    /// Get a self-scoped conclusion handle (observer = observed = self).
+    #[must_use]
+    pub fn conclusions(&self) -> ConclusionScope {
+        ConclusionScope::new(
+            self.inner.http.clone(),
+            self.inner.workspace_id.clone(),
+            self.id().to_owned(),
+            self.id().to_owned(),
+        )
+    }
+
+    /// Get a cross-peer conclusion handle (observer = self, observed = target).
+    #[must_use]
+    pub fn conclusions_of(&self, target: impl Into<String>) -> ConclusionScope {
+        ConclusionScope::new(
+            self.inner.http.clone(),
+            self.inner.workspace_id.clone(),
+            self.id().to_owned(),
+            target.into(),
+        )
+    }
+
     // ── F5.8: Message builder (sync, no API call) ─────────────────────
 
     /// Create a message builder for this peer.
@@ -657,5 +682,21 @@ impl MessageBuilder {
             configuration: self.configuration,
             created_at: self.created_at,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::pin::Pin;
+
+    #[allow(dead_code)]
+    fn assert_send_static<T: Send + 'static>(_: &T) {}
+
+    #[test]
+    fn chat_stream_return_type_is_send_static() {
+        fn _assertion(stream: Pin<Box<dyn futures_util::Stream<Item = Result<String>> + Send>>) {
+            assert_send_static(&stream);
+        }
     }
 }

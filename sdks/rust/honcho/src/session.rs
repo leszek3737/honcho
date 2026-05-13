@@ -91,10 +91,10 @@ impl From<(&str, SessionPeerConfig)> for PeerSpec {
 struct PeersPageResponse {
     items: Vec<crate::types::peer::Peer>,
     #[serde(default)]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     total: u64,
     #[serde(default)]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pages: u64,
 }
 
@@ -693,12 +693,16 @@ fn normalize_peers(specs: impl IntoIterator<Item = impl Into<PeerSpec>>) -> serd
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+    use static_assertions::assert_impl_all;
+
     use super::*;
     use crate::http::client::HttpClient;
     use crate::types::session::Session as SessionResponse;
     use chrono::TimeZone;
     use wiremock::matchers::{body_string_contains, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    assert_impl_all!(UploadFileBuilder<'_>: Send);
 
     fn session_json(id: &str) -> serde_json::Value {
         serde_json::json!({

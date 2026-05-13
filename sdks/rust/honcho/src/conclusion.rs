@@ -16,7 +16,7 @@ use crate::types::dialectic::RepresentationResponse;
 use crate::types::pagination::paginate_post;
 
 pub(crate) struct ConclusionInner {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     http: HttpClient,
     workspace_id: String,
     id: String,
@@ -36,7 +36,6 @@ pub struct Conclusion {
 }
 
 impl Conclusion {
-    #[allow(dead_code)]
     pub(crate) fn from_parts(http: HttpClient, workspace_id: String, resp: ConclusionData) -> Self {
         Self {
             inner: Arc::new(ConclusionInner {
@@ -52,7 +51,7 @@ impl Conclusion {
         }
     }
 
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub(crate) fn from_response(honcho: &crate::Honcho, resp: ConclusionData) -> Self {
         Self::from_parts(
             honcho.http().clone(),
@@ -167,7 +166,7 @@ pub struct ConclusionScope {
 }
 
 impl ConclusionScope {
-    #[allow(dead_code, clippy::similar_names)]
+    #[allow(clippy::similar_names)]
     pub(crate) fn new(
         http: HttpClient,
         workspace_id: String,
@@ -203,6 +202,10 @@ impl ConclusionScope {
     /// batches of 100 (D24). Each chunk is a separate HTTP request; if any
     /// chunk fails the error is returned immediately (previously created
     /// conclusions from earlier chunks are not rolled back).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HonchoError::Server`] if the server rejects any batch.
     pub async fn create(
         &self,
         conclusions: impl IntoIterator<Item = impl Into<ConclusionCreateParams>>,
@@ -240,6 +243,13 @@ impl ConclusionScope {
     /// **GOTCHA (C41):** This hits the *peer* representation endpoint, not the
     /// conclusion endpoint — `POST /v3/workspaces/{ws}/peers/{observer}/representation`
     /// with `target: observed_id`.
+    ///
+    /// # Errors
+    ///
+    /// The builder's `.send()` returns [`HonchoError::Configuration`] if
+    /// `search_top_k` ∉ [1, 100], `search_max_distance` ∉ [0.0, 1.0],
+    /// or `max_conclusions` ∉ [1, 100]. Returns [`HonchoError::Server`] on
+    /// transport or API errors.
     #[must_use]
     pub fn representation(&self) -> ConclusionRepresentationBuilder {
         ConclusionRepresentationBuilder {
@@ -256,6 +266,14 @@ impl ConclusionScope {
     }
 
     /// Return a builder for listing conclusions in this scope (paginated).
+    ///
+    /// Defaults: page 1, size 50, ascending order, no session filter.
+    /// Chain `.session()`, `.page()`, `.size()`, `.reverse()` to customise,
+    /// then call `.send()` to execute.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HonchoError::Server`] if the server rejects the request.
     pub fn list(&self) -> ListConclusionsBuilder {
         ListConclusionsBuilder {
             scope: self.clone(),
@@ -267,6 +285,15 @@ impl ConclusionScope {
     }
 
     /// Return a builder for semantically querying conclusions in this scope.
+    ///
+    /// Defaults: `top_k` = 10, no distance threshold.
+    /// Chain `.top_k()` and `.distance()` to customise, then call `.send()`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HonchoError::Configuration`] if `top_k` ∉ [1, 100]
+    /// or `distance` ∉ [0.0, 1.0]. Returns [`HonchoError::Server`] on
+    /// transport or API errors.
     pub fn query(&self, query: impl Into<String>) -> QueryConclusionsBuilder {
         QueryConclusionsBuilder {
             scope: self.clone(),
@@ -277,6 +304,11 @@ impl ConclusionScope {
     }
 
     /// Delete a conclusion by ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HonchoError::Server`] if the conclusion does not exist or
+    /// the server rejects the request.
     pub async fn delete(&self, conclusion_id: impl Into<String>) -> Result<()> {
         let route = routes::conclusion_delete(&self.inner.workspace_id, &conclusion_id.into());
         self.inner.http.delete(&route, &[]).await
@@ -377,9 +409,6 @@ impl ConclusionRepresentationBuilder {
         Ok(resp.representation)
     }
 }
-
-// TODO (F9.8): Peer::conclusions()       → ConclusionScope (observer=observed=self.id)
-// TODO (F9.8): Peer::conclusions_of(t)   → ConclusionScope (observed=target)
 
 /// Builder for paginated conclusion listing, obtained via [`ConclusionScope::list()`].
 #[must_use]
@@ -1069,5 +1098,92 @@ mod tests {
             .await;
 
         scope.delete("conc-42").await.unwrap();
+    }
+
+    // ── F9.8.3: E2E lifecycle: create → list → query → delete ──────────
+
+    #[tokio::test]
+    async fn full_lifecycle_create_list_query_delete() {
+        let server = MockServer::start().await;
+        let scope = make_scope(&server);
+
+        // Step 1: Create
+        let create_body = serde_json::json!({
+            "conclusions": [{
+                "content": "likes rust",
+                "observer_id": "alice",
+                "observed_id": "bob",
+            }]
+        });
+        Mock::given(method("POST"))
+            .and(path("/v3/workspaces/ws1/conclusions"))
+            .and(body_json(&create_body))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(vec![conclusion_json("likes rust", "c1")]),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let created = scope
+            .create([ConclusionCreateParams::new("likes rust")])
+            .await
+            .unwrap();
+        assert_eq!(created.len(), 1);
+        assert_eq!(created[0].id(), "c1");
+
+        // Step 2: List
+        let list_body = serde_json::json!({
+            "filters": {
+                "observer_id": "alice",
+                "observed_id": "bob",
+            }
+        });
+        Mock::given(method("POST"))
+            .and(path("/v3/workspaces/ws1/conclusions/list"))
+            .and(body_json(&list_body))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(page_json(vec![conclusion_json("likes rust", "c1")])),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let page = scope.list().send().await.unwrap();
+        assert_eq!(page.total(), 1);
+
+        // Step 3: Query
+        let query_body = serde_json::json!({
+            "query": "preferences",
+            "top_k": 10,
+            "filters": {
+                "observer_id": "alice",
+                "observed_id": "bob",
+            }
+        });
+        Mock::given(method("POST"))
+            .and(path("/v3/workspaces/ws1/conclusions/query"))
+            .and(body_json(&query_body))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(vec![conclusion_json("likes rust", "c1")]),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let queried = scope.query("preferences").send().await.unwrap();
+        assert_eq!(queried.len(), 1);
+        assert_eq!(queried[0].id, "c1");
+
+        // Step 4: Delete
+        Mock::given(method("DELETE"))
+            .and(path("/v3/workspaces/ws1/conclusions/c1"))
+            .respond_with(ResponseTemplate::new(204))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        scope.delete("c1").await.unwrap();
     }
 }

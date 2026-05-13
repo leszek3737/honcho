@@ -143,8 +143,12 @@ pub(crate) async fn resolve_to_bytes(
 
 #[cfg(test)]
 mod tests {
+    use static_assertions::assert_impl_all;
+
     use super::*;
     use std::io::Write;
+
+    assert_impl_all!(FileSource: Send);
 
     #[tokio::test]
     async fn file_source_path_resolves_filename_and_content_type() {

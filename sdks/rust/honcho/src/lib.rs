@@ -28,6 +28,8 @@
 pub mod client;
 /// Conclusion wrapper type.
 pub mod conclusion;
+/// Stream adapter for dialectic responses.
+pub mod dialectic_stream;
 pub mod error;
 pub mod http;
 /// Message wrapper type.
@@ -43,6 +45,7 @@ pub mod upload;
 
 pub use client::Honcho;
 pub use conclusion::{Conclusion, ConclusionCreateParams, ConclusionScope};
+pub use dialectic_stream::DialecticStream;
 pub use message::Message;
 pub use peer::Peer;
 pub use session::{Session, UploadFileBuilder};

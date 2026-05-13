@@ -1,5 +1,3 @@
-#![allow(dead_code)] // Phase 2 route helpers — consumed by Phase 3 high-level API
-
 use std::fmt::Write as _;
 
 pub(crate) const API_BASE_PATH: &str = "v3";

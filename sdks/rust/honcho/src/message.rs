@@ -11,7 +11,7 @@ use crate::http::client::HttpClient;
 use crate::types::message::MessageResponse;
 
 pub(crate) struct MessageInner {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     http: HttpClient,
     workspace_id: String,
     id: String,
