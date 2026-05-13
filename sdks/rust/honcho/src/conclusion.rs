@@ -376,7 +376,7 @@ impl ConclusionRepresentationBuilder {
     ///
     /// # Errors
     ///
-    /// Returns [`HonchoError::Configuration`](crate::error::HonchoError::Configuration)
+    /// Returns [`HonchoError::Configuration`]
     /// if `search_top_k`, `search_max_distance`, or `max_conclusions` are out of range.
     pub async fn send(self) -> Result<String> {
         if let Some(k) = self.search_top_k {

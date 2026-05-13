@@ -8,7 +8,7 @@ use tokio::io::AsyncRead;
 /// A source for file data that will be uploaded.
 ///
 /// Construct with [`FileSource::bytes`], [`FileSource::path`], or
-/// [`FileSource::stream`], or convert from [`PathBuf`]/[`&Path`] via the
+/// [`FileSource::stream`], or convert from [`PathBuf`]/[`std::path::Path`] via the
 /// `From` impls.
 pub enum FileSource {
     /// Raw bytes with explicit filename and content type.
