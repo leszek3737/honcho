@@ -271,8 +271,8 @@ async fn workspace_metadata_and_configuration() {
 
     let mut config = HashMap::new();
     config.insert("feature_x".to_owned(), json!(true));
-    client.set_configuration(config).await.unwrap();
-    let fetched_config = client.get_configuration().await.unwrap();
+    client.set_configuration_raw(config).await.unwrap();
+    let fetched_config = client.get_configuration_raw().await.unwrap();
     assert_eq!(fetched_config.get("feature_x").unwrap(), &json!(true));
 
     drop(guard);

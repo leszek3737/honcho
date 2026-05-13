@@ -63,7 +63,6 @@ async fn search_returns_messages() {
 
     let search_body = serde_json::json!({
         "query": "hello",
-        "filters": null,
         "limit": 10
     });
 
@@ -112,7 +111,7 @@ async fn queue_status_returns_status() {
         .mount(&server)
         .await;
 
-    let status: QueueStatus = honcho.queue_status().await.unwrap();
+    let status: QueueStatus = honcho.queue_status(None, None, None).await.unwrap();
     assert_eq!(status.total_work_units, 10);
     assert_eq!(status.completed_work_units, 8);
     assert_eq!(status.in_progress_work_units, 1);
@@ -141,7 +140,7 @@ async fn schedule_dream_posts_correct_body() {
         .mount(&server)
         .await;
 
-    honcho.schedule_dream("alice").await.unwrap();
+    honcho.schedule_dream("alice", None, None).await.unwrap();
 }
 
 #[tokio::test]

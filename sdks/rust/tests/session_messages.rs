@@ -10,9 +10,9 @@
 
 use std::collections::HashMap;
 
-use honcho_ai::session::Session;
 use honcho_ai::Honcho;
-use serde_json::{json, Value};
+use honcho_ai::session::Session;
+use serde_json::{Value, json};
 use wiremock::matchers::{body_json, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 

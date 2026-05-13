@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use crate::error::Result;
 use crate::session::PeerSpec;
-use crate::types::message::MessageResponse;
+use crate::types::message::{MessageResponse, MessageSearchOptions};
 use crate::types::session::SessionPeerConfig;
 
 use super::runtime::block_on;
@@ -154,6 +154,14 @@ impl Session {
         block_on(self.inner.context())
     }
 
+    /// Get session context with custom parameters.
+    pub fn context_with_options(
+        &self,
+        options: &crate::types::session::SessionContextOptions,
+    ) -> Result<crate::types::session::SessionContext> {
+        block_on(self.inner.context_with_options(options))
+    }
+
     /// Get available summaries.
     pub fn summaries(&self) -> Result<crate::types::session::SessionSummaries> {
         block_on(self.inner.summaries())
@@ -164,13 +172,25 @@ impl Session {
         block_on(self.inner.search(query))
     }
 
+    /// Search messages within this session with custom options.
+    pub fn search_with_options(
+        &self,
+        options: &MessageSearchOptions,
+    ) -> Result<Vec<MessageResponse>> {
+        block_on(self.inner.search_with_options(options))
+    }
+
     /// Get a peer's representation scoped to this session.
     pub fn representation(&self, peer_id: &str) -> Result<String> {
         block_on(self.inner.representation(peer_id))
     }
 
     /// Get processing queue status for this session.
-    pub fn queue_status(&self) -> Result<crate::types::dream::QueueStatus> {
-        block_on(self.inner.queue_status())
+    pub fn queue_status(
+        &self,
+        observer_id: Option<&str>,
+        sender_id: Option<&str>,
+    ) -> Result<crate::types::dream::QueueStatus> {
+        block_on(self.inner.queue_status(observer_id, sender_id))
     }
 }
