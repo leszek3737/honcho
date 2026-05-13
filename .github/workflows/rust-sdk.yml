@@ -32,7 +32,9 @@ jobs:
         working-directory: sdks/rust
     steps:
       - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@cargo-msrv
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-msrv
       - run: cargo msrv verify
   integration:
     needs: test
