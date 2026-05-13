@@ -655,8 +655,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result: () = client.delete("/v3/test", &[]).await.unwrap();
-        assert_eq!(result, ());
+        let _: () = client.delete("/v3/test", &[]).await.unwrap();
     }
 
     // ── Auth & headers ───────────────────────────────────────────────────
@@ -749,8 +748,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result: () = client.delete("/v3/test", &[]).await.unwrap();
-        assert_eq!(result, ());
+        let _: () = client.delete("/v3/test", &[]).await.unwrap();
     }
 
     #[tokio::test]
@@ -763,8 +761,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result: () = client.get("/v3/test", &[]).await.unwrap();
-        assert_eq!(result, ());
+        let _: () = client.get("/v3/test", &[]).await.unwrap();
     }
 
     // ── Timeout ──────────────────────────────────────────────────────────
