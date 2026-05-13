@@ -126,7 +126,7 @@ impl Peer {
     pub fn sessions(&self) -> Result<Vec<Session>> {
         block_on(async {
             let page = self.inner.sessions().await?;
-            Ok(collect_all_pages(page).await)
+            collect_all_pages(page).await
         })
     }
 

@@ -116,7 +116,7 @@ impl Session {
     pub fn messages(&self) -> Result<Vec<crate::Message>> {
         block_on(async {
             let page = self.inner.messages().await?;
-            Ok(super::iter::collect_all_pages(page).await)
+            super::iter::collect_all_pages(page).await
         })
     }
 
