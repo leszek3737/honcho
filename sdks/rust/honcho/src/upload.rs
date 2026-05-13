@@ -1,12 +1,15 @@
 //! File source abstraction for uploads.
 
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
+
+use tokio::io::AsyncRead;
 
 /// A source for file data that will be uploaded.
 ///
-/// Construct with [`FileSource::bytes`] or [`FileSource::path`], or convert
-/// from [`PathBuf`]/[`&Path`] via the `From` impls.
-#[derive(Debug)]
+/// Construct with [`FileSource::bytes`], [`FileSource::path`], or
+/// [`FileSource::stream`], or convert from [`PathBuf`]/[`&Path`] via the
+/// `From` impls.
 pub enum FileSource {
     /// Raw bytes with explicit filename and content type.
     Bytes {
@@ -19,6 +22,42 @@ pub enum FileSource {
     },
     /// A filesystem path. Resolved at upload time.
     Path(PathBuf),
+    /// A streaming reader — uploaded without buffering the entire payload.
+    Stream {
+        /// File name to send.
+        filename: String,
+        /// Async reader producing the file data.
+        reader: Pin<Box<dyn AsyncRead + Send>>,
+        /// MIME content type.
+        content_type: String,
+    },
+}
+
+impl std::fmt::Debug for FileSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bytes {
+                filename,
+                bytes,
+                content_type,
+            } => f
+                .debug_struct("Bytes")
+                .field("filename", filename)
+                .field("bytes", &bytes.len())
+                .field("content_type", content_type)
+                .finish(),
+            Self::Path(p) => f.debug_tuple("Path").field(p).finish(),
+            Self::Stream {
+                filename,
+                content_type,
+                ..
+            } => f
+                .debug_struct("Stream")
+                .field("filename", filename)
+                .field("content_type", content_type)
+                .finish_non_exhaustive(),
+        }
+    }
 }
 
 impl FileSource {
@@ -38,6 +77,22 @@ impl FileSource {
     /// Create a `Path` variant.
     pub fn path(path: impl Into<PathBuf>) -> Self {
         Self::Path(path.into())
+    }
+
+    /// Create a `Stream` variant from an [`AsyncRead`] source.
+    ///
+    /// The reader is consumed lazily via [`tokio_util::io::ReaderStream`]
+    /// so the upload does **not** buffer the entire payload in memory.
+    pub fn stream(
+        filename: impl Into<String>,
+        reader: impl AsyncRead + Send + 'static,
+        content_type: impl Into<String>,
+    ) -> Self {
+        Self::Stream {
+            filename: filename.into(),
+            reader: Box::pin(reader),
+            content_type: content_type.into(),
+        }
     }
 }
 
@@ -79,6 +134,10 @@ pub(crate) async fn resolve_to_bytes(
                 .to_string();
             Ok((filename, data, content_type))
         }
+        FileSource::Stream { .. } => Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "cannot buffer a stream source — use the streaming upload path",
+        )),
     }
 }
 

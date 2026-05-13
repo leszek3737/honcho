@@ -183,7 +183,6 @@ impl Default for SseParser {
     }
 }
 
-#[expect(dead_code)]
 pub(crate) fn parse_sse_stream(
     stream: impl futures_util::Stream<Item = Result<bytes::Bytes, reqwest::Error>> + Send + 'static,
 ) -> impl futures_util::Stream<Item = Result<String, crate::error::HonchoError>> + Send + 'static {

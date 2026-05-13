@@ -152,12 +152,27 @@ impl UploadFileBuilder<'_> {
             .source
             .ok_or_else(|| HonchoError::Validation("file source is required".into()))?;
 
-        let (filename, bytes, content_type) = upload::resolve_to_bytes(source).await?;
-
-        let file_part = reqwest::multipart::Part::bytes(bytes)
-            .file_name(filename)
-            .mime_str(&content_type)
-            .map_err(|e| HonchoError::Configuration(format!("invalid mime type: {e}")))?;
+        let file_part = match source {
+            FileSource::Stream {
+                filename,
+                reader,
+                content_type,
+            } => {
+                let stream = tokio_util::io::ReaderStream::new(reader);
+                let body = reqwest::Body::wrap_stream(stream);
+                reqwest::multipart::Part::stream(body)
+                    .file_name(filename)
+                    .mime_str(&content_type)
+                    .map_err(|e| HonchoError::Configuration(format!("invalid mime type: {e}")))?
+            }
+            buffered => {
+                let (filename, bytes, content_type) = upload::resolve_to_bytes(buffered).await?;
+                reqwest::multipart::Part::bytes(bytes)
+                    .file_name(filename)
+                    .mime_str(&content_type)
+                    .map_err(|e| HonchoError::Configuration(format!("invalid mime type: {e}")))?
+            }
+        };
 
         let mut form = Form::new().part("file", file_part).text("peer_id", peer_id);
 
@@ -500,6 +515,30 @@ impl Session {
         UploadFileBuilder {
             session: self,
             source: Some(source.into()),
+            peer_id: None,
+            metadata: None,
+            configuration: None,
+            created_at: None,
+        }
+    }
+
+    /// Begin a **streaming** file upload to this session.
+    ///
+    /// Unlike [`Session::upload_file`], the reader is consumed lazily via
+    /// [`tokio_util::io::ReaderStream`] so the entire file is never buffered
+    /// in memory.
+    ///
+    /// Returns an [`UploadFileBuilder`]. You **must** call `.peer(id)` and
+    /// then `.send()` to complete the upload.
+    pub fn upload_file_streamed(
+        &self,
+        filename: impl Into<String>,
+        reader: impl tokio::io::AsyncRead + Send + 'static,
+        content_type: impl Into<String>,
+    ) -> UploadFileBuilder<'_> {
+        UploadFileBuilder {
+            session: self,
+            source: Some(FileSource::stream(filename, reader, content_type)),
             peer_id: None,
             metadata: None,
             configuration: None,
@@ -851,5 +890,32 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(err.code(), "validation_error");
+    }
+
+    #[tokio::test]
+    async fn upload_file_streamed_uses_reader_stream() {
+        let server = MockServer::start().await;
+        let http =
+            HttpClient::from_params(HttpClient::builder().base_url(server.uri()).build()).unwrap();
+        let session = make_session(http, "sess1");
+
+        Mock::given(method("POST"))
+            .and(path("/v3/workspaces/ws1/sessions/sess1/messages/upload"))
+            .and(body_string_contains("streamed payload"))
+            .and(body_string_contains("peer_id"))
+            .and(body_string_contains("carol"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(upload_response_json()))
+            .mount(&server)
+            .await;
+
+        let cursor = std::io::Cursor::new(b"streamed payload".to_vec());
+        let msgs = session
+            .upload_file_streamed("doc.txt", cursor, "text/plain")
+            .peer("carol")
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(msgs.len(), 1);
     }
 }
