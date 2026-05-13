@@ -216,15 +216,16 @@ impl ConclusionScope {
         &self,
         conclusions: impl IntoIterator<Item = impl Into<ConclusionCreateParams>>,
     ) -> Result<Vec<Conclusion>> {
-        let params: Vec<ConclusionCreateParams> = conclusions.into_iter().map(Into::into).collect();
-
-        let creates: Vec<ConclusionCreate> = params
+        let creates: Vec<ConclusionCreate> = conclusions
             .into_iter()
-            .map(|p| ConclusionCreate {
-                content: p.content,
-                observer_id: self.inner.observer.clone(),
-                observed_id: self.inner.observed.clone(),
-                session_id: p.session_id,
+            .map(|c| {
+                let p: ConclusionCreateParams = c.into();
+                ConclusionCreate {
+                    content: p.content,
+                    observer_id: self.inner.observer.clone(),
+                    observed_id: self.inner.observed.clone(),
+                    session_id: p.session_id,
+                }
             })
             .collect();
 

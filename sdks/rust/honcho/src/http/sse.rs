@@ -85,7 +85,7 @@ impl SseParser {
             }
         }
         if start > 0 {
-            self.pending_bytes = self.pending_bytes[start..].to_vec();
+            self.pending_bytes.drain(..start);
         }
     }
 
@@ -119,37 +119,44 @@ impl SseParser {
                 }
             }
             (Some(n), None) => {
-                let line = self.buffer[..n].to_string();
-                self.buffer = self.buffer[n + 1..].to_string();
-                Some(line.strip_suffix('\r').map(str::to_string).unwrap_or(line))
+                let mut line = self.buffer[..n].to_string();
+                self.buffer.drain(..=n);
+                if line.ends_with('\r') {
+                    line.pop();
+                }
+                Some(line)
             }
             (None, Some(r)) => {
                 if r == self.buffer.len() - 1 && !flush_partial {
                     return None;
                 }
-                if r + 1 < self.buffer.len() && self.buffer.as_bytes()[r + 1] == b'\n' {
-                    let line = self.buffer[..r].to_string();
-                    self.buffer = self.buffer[r + 2..].to_string();
-                    return Some(line);
-                }
+                let end = if r + 1 < self.buffer.len() && self.buffer.as_bytes()[r + 1] == b'\n' {
+                    r + 2
+                } else {
+                    r + 1
+                };
                 let line = self.buffer[..r].to_string();
-                self.buffer = self.buffer[r + 1..].to_string();
+                self.buffer.drain(..end);
                 Some(line)
             }
             (Some(n), Some(r)) => {
                 if r < n {
-                    if r + 1 < self.buffer.len() && self.buffer.as_bytes()[r + 1] == b'\n' {
-                        let line = self.buffer[..r].to_string();
-                        self.buffer = self.buffer[r + 2..].to_string();
-                        return Some(line);
-                    }
+                    let end = if r + 1 < self.buffer.len() && self.buffer.as_bytes()[r + 1] == b'\n'
+                    {
+                        r + 2
+                    } else {
+                        r + 1
+                    };
                     let line = self.buffer[..r].to_string();
-                    self.buffer = self.buffer[r + 1..].to_string();
+                    self.buffer.drain(..end);
                     Some(line)
                 } else {
-                    let line = self.buffer[..n].to_string();
-                    self.buffer = self.buffer[n + 1..].to_string();
-                    Some(line.strip_suffix('\r').map(str::to_string).unwrap_or(line))
+                    let mut line = self.buffer[..n].to_string();
+                    self.buffer.drain(..=n);
+                    if line.ends_with('\r') {
+                        line.pop();
+                    }
+                    Some(line)
                 }
             }
         }
@@ -179,7 +186,7 @@ impl SseParser {
         let obj = parsed.as_object()?;
 
         if let Some(done_val) = obj.get("done") {
-            if !done_val.is_null() && done_val != &serde_json::json!(false) {
+            if !done_val.is_null() && done_val.as_bool().unwrap_or(true) {
                 self.done = true;
                 return None;
             }
