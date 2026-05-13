@@ -57,20 +57,35 @@ impl SseParser {
 
     fn decode_pending(&mut self, chunk: &[u8]) {
         self.pending_bytes.extend_from_slice(chunk);
-        match std::str::from_utf8(&self.pending_bytes) {
-            Ok(s) => {
-                self.buffer.push_str(s);
-                self.pending_bytes.clear();
-            }
-            Err(e) => {
-                let valid_up_to = e.valid_up_to();
-                if valid_up_to > 0 {
-                    let valid =
-                        std::str::from_utf8(&self.pending_bytes[..valid_up_to]).unwrap_or_default();
-                    self.buffer.push_str(valid);
-                    self.pending_bytes = self.pending_bytes[valid_up_to..].to_vec();
+        let mut start = 0;
+        while start < self.pending_bytes.len() {
+            match std::str::from_utf8(&self.pending_bytes[start..]) {
+                Ok(s) => {
+                    self.buffer.push_str(s);
+                    self.pending_bytes.clear();
+                    return;
+                }
+                Err(e) => {
+                    let valid_up_to = e.valid_up_to();
+                    if valid_up_to > 0 {
+                        self.buffer.push_str(
+                            std::str::from_utf8(&self.pending_bytes[start..start + valid_up_to])
+                                .unwrap_or_default(),
+                        );
+                        start += valid_up_to;
+                    }
+                    match e.error_len() {
+                        Some(bad_len) => {
+                            self.buffer.push('\u{FFFD}');
+                            start += bad_len;
+                        }
+                        None => break,
+                    }
                 }
             }
+        }
+        if start > 0 {
+            self.pending_bytes = self.pending_bytes[start..].to_vec();
         }
     }
 
@@ -163,9 +178,11 @@ impl SseParser {
 
         let obj = parsed.as_object()?;
 
-        if obj.get("done").and_then(Value::as_bool).unwrap_or(false) {
-            self.done = true;
-            return None;
+        if let Some(done_val) = obj.get("done") {
+            if !done_val.is_null() && done_val != &serde_json::json!(false) {
+                self.done = true;
+                return None;
+            }
         }
 
         let delta = obj.get("delta")?.as_object()?;
@@ -389,6 +406,20 @@ mod tests {
         let mut p = SseParser::new();
         let r = p.feed(b"");
         assert!(r.is_empty());
+    }
+
+    #[test]
+    fn invalid_utf8_byte_does_not_block_subsequent_valid_bytes() {
+        let mut p = SseParser::new();
+
+        let mut chunk1 = b"data: {\"delta\":{\"content\":\"".to_vec();
+        chunk1.push(0xFF);
+        chunk1.extend_from_slice(b"\"}}\n\n");
+        let r1 = p.feed(&chunk1);
+        assert_eq!(r1, vec!["\u{FFFD}"]);
+
+        let r2 = p.feed(&data_line(r#"{"delta":{"content":"ok"}}"#));
+        assert_eq!(r2, vec!["ok"]);
     }
 
     #[test]

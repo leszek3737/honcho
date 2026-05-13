@@ -118,7 +118,13 @@ impl Message {
 impl fmt::Debug for Message {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let truncated = if self.inner.content.len() > 50 {
-            format!("{}...", &self.inner.content[..50])
+            let end = self
+                .inner
+                .content
+                .char_indices()
+                .nth(50)
+                .map_or(self.inner.content.len(), |(i, _)| i);
+            format!("{}...", &self.inner.content[..end])
         } else {
             self.inner.content.clone()
         };
@@ -200,5 +206,15 @@ mod tests {
         let honcho = crate::Honcho::new("http://localhost:9999", "ws_1").unwrap();
         let msg = Message::from_response(&honcho, resp);
         assert_eq!(format!("{msg}"), "a".repeat(80));
+    }
+
+    #[test]
+    fn debug_truncation_multibyte_utf8() {
+        let mut resp = fake_response();
+        resp.content = "\u{4e00}".repeat(60);
+        let honcho = crate::Honcho::new("http://localhost:9999", "ws_1").unwrap();
+        let msg = Message::from_response(&honcho, resp);
+        let dbg = format!("{msg:?}");
+        assert!(dbg.contains("..."));
     }
 }

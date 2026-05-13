@@ -106,7 +106,13 @@ impl Conclusion {
 impl fmt::Debug for Conclusion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let truncated = if self.inner.content.len() > 50 {
-            &self.inner.content[..50]
+            let end = self
+                .inner
+                .content
+                .char_indices()
+                .nth(50)
+                .map_or(self.inner.content.len(), |(i, _)| i);
+            &self.inner.content[..end]
         } else {
             &self.inner.content
         };
@@ -447,6 +453,11 @@ impl ListConclusionsBuilder {
 
     /// Send the list request and return a paginated result.
     pub async fn send(self) -> Result<ConclusionPage> {
+        if self.size == 0 {
+            return Err(HonchoError::Configuration(
+                "page size must be greater than 0".to_string(),
+            ));
+        }
         let mut filters = serde_json::json!({
             "observer_id": self.scope.inner.observer,
             "observed_id": self.scope.inner.observed,
@@ -592,6 +603,14 @@ mod tests {
         let dbg = format!("{conc:?}");
         assert!(dbg.contains("Conclusion { id: \"c1\", content: \""));
         assert!(!dbg.contains(&"a".repeat(80)));
+    }
+
+    #[test]
+    fn debug_truncation_multibyte_utf8() {
+        let data = make_conclusion_data("\u{4e00}".repeat(60), None);
+        let conc = Conclusion::from_parts(test_http(), "ws".to_owned(), data);
+        let dbg = format!("{conc:?}");
+        assert!(!dbg.contains(&"\u{4e00}".repeat(60)));
     }
 
     #[test]
