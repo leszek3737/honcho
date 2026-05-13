@@ -18,6 +18,14 @@ pub struct DialecticStream<S> {
     complete: bool,
 }
 
+impl<S> std::fmt::Debug for DialecticStream<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialecticStream")
+            .field("state", &"<hidden>")
+            .finish()
+    }
+}
+
 impl<S> DialecticStream<S>
 where
     S: Stream<Item = Result<String>> + Unpin,

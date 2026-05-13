@@ -402,14 +402,15 @@ impl ConclusionRepresentationBuilder {
             }
         }
 
-        let params = serde_json::json!({
-            "target": self.observed_id,
-            "search_query": self.search_query,
-            "search_top_k": self.search_top_k,
-            "search_max_distance": self.search_max_distance,
-            "include_most_frequent": self.include_most_frequent,
-            "max_conclusions": self.max_conclusions,
-        });
+        let params = crate::types::peer::PeerRepresentationGet {
+            session_id: None,
+            target: Some(self.observed_id),
+            search_query: self.search_query,
+            search_top_k: self.search_top_k,
+            search_max_distance: self.search_max_distance,
+            include_most_frequent: self.include_most_frequent,
+            max_conclusions: self.max_conclusions,
+        };
 
         let route = routes::peer_representation(&self.workspace_id, &self.observer_id);
         let resp: RepresentationResponse = self.http.post(&route, Some(&params), &[]).await?;
@@ -857,11 +858,6 @@ mod tests {
 
         let expected_body = serde_json::json!({
             "target": "bob",
-            "search_query": null,
-            "search_top_k": null,
-            "search_max_distance": null,
-            "include_most_frequent": null,
-            "max_conclusions": null,
         });
 
         Mock::given(method("POST"))

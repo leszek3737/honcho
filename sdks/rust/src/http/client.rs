@@ -33,6 +33,7 @@ pub struct HttpClient {
 }
 
 #[derive(bon::Builder)]
+#[doc(hidden)]
 pub struct HttpClientParams {
     base_url: String,
     api_key: Option<String>,
@@ -189,7 +190,26 @@ impl HttpClient {
             }
 
             let headers = response.headers().clone();
-            let body_bytes = response.bytes().await.unwrap_or_default();
+            let body_bytes = match response.bytes().await {
+                Ok(b) => b,
+                Err(_) => {
+                    let msg = format!(
+                        "request failed with status {} (could not read response body)",
+                        status.as_u16()
+                    );
+                    return Err(if status.is_server_error() {
+                        HonchoError::Server {
+                            status: status.as_u16(),
+                            message: msg,
+                        }
+                    } else {
+                        HonchoError::Client {
+                            status: status.as_u16(),
+                            message: msg,
+                        }
+                    });
+                }
+            };
             let api_error = error::from_response(status, &headers, &body_bytes, Utc::now());
 
             let is_retryable = matches!(status.as_u16(), 429 | 500 | 502 | 503 | 504);

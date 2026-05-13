@@ -10,7 +10,9 @@ static SCHEMAS: std::sync::OnceLock<serde_json::Value> = std::sync::OnceLock::ne
 fn openapi_spec() -> &'static serde_json::Value {
     SCHEMAS.get_or_init(|| {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-        let path = Path::new(&manifest_dir).join("../../../docs/v3/openapi.json");
+        let path = std::env::var("HONCHO_OPENAPI_SPEC")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| Path::new(&manifest_dir).join("../../docs/v3/openapi.json"));
         let content = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("failed to read openapi.json at {:?}: {e}", path));
         serde_json::from_str(&content)

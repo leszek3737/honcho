@@ -78,7 +78,6 @@ pub struct MessageGet {
 ///
 /// All fields optional; message-level config overrides session and workspace config.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-#[non_exhaustive]
 pub struct MessageConfiguration {
     /// Reasoning configuration for this message.
     pub reasoning: Option<ReasoningConfiguration>,
