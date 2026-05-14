@@ -304,3 +304,66 @@ impl BlockingUploadFileBuilder<'_> {
         block_on(self.inner.send())
     }
 }
+
+/// Blocking builder for session representation queries.
+///
+/// Wraps the async `SessionRepresentationBuilder`.
+#[must_use]
+pub struct BlockingSessionRepresentationBuilder {
+    inner: super::super::session::SessionRepresentationBuilder,
+}
+
+impl BlockingSessionRepresentationBuilder {
+    /// Set the target peer.
+    pub fn target(mut self, target: impl Into<String>) -> Self {
+        self.inner = self.inner.target(target);
+        self
+    }
+
+    /// Set a semantic search query.
+    pub fn search_query(mut self, query: impl Into<String>) -> Self {
+        self.inner = self.inner.search_query(query);
+        self
+    }
+
+    /// Set the number of top search results.
+    pub fn search_top_k(mut self, k: u32) -> Self {
+        self.inner = self.inner.search_top_k(k);
+        self
+    }
+
+    /// Set the maximum search distance.
+    pub fn search_max_distance(mut self, d: f64) -> Self {
+        self.inner = self.inner.search_max_distance(d);
+        self
+    }
+
+    /// Include the most frequent conclusions.
+    pub fn include_most_frequent(mut self, v: bool) -> Self {
+        self.inner = self.inner.include_most_frequent(v);
+        self
+    }
+
+    /// Set the maximum number of conclusions.
+    pub fn max_conclusions(mut self, m: u32) -> Self {
+        self.inner = self.inner.max_conclusions(m);
+        self
+    }
+
+    /// Execute the request and return the representation.
+    pub fn send(self) -> Result<String> {
+        block_on(self.inner.send())
+    }
+}
+
+impl Session {
+    /// Get a representation builder for a peer in this session.
+    pub fn representation_builder(
+        &self,
+        peer_id: impl Into<String>,
+    ) -> BlockingSessionRepresentationBuilder {
+        BlockingSessionRepresentationBuilder {
+            inner: self.inner.representation_builder(peer_id.into()),
+        }
+    }
+}

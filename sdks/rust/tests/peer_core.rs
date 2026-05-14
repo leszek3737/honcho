@@ -147,9 +147,7 @@ async fn peer_set_configuration_puts_to_peer_endpoint() {
     let server = MockServer::start().await;
     let peer = make_peer(&server).await;
 
-    let new_config: PeerConfig = serde_json::from_value(
-        json!({"observe_me": true}),
-    ).unwrap();
+    let new_config: PeerConfig = serde_json::from_value(json!({"observe_me": true})).unwrap();
 
     let resp = peer_response_with(json!({"role": "admin"}), json!({"observe_me": true}));
 
@@ -171,7 +169,10 @@ async fn peer_get_configuration_returns_from_cache() {
     let server = MockServer::start().await;
     let peer = make_peer(&server).await;
 
-    let updated = peer_response_with(json!({}), json!({"observe_me": true, "observe_others": false}));
+    let updated = peer_response_with(
+        json!({}),
+        json!({"observe_me": true, "observe_others": false}),
+    );
 
     Mock::given(method("POST"))
         .and(path("/v3/workspaces/ws1/peers"))

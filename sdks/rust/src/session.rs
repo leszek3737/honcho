@@ -266,13 +266,7 @@ impl UploadFileBuilder<'_> {
 
         Ok(responses
             .into_iter()
-            .map(|r| {
-                crate::Message::from_raw(
-                    self.session.inner.http.clone(),
-                    self.session.inner.workspace_id.clone(),
-                    r,
-                )
-            })
+            .map(|r| crate::Message::from_raw(self.session.inner.workspace_id.clone(), r))
             .collect())
     }
 }
@@ -670,8 +664,7 @@ impl Session {
     pub async fn peers(&self) -> Result<Vec<crate::Peer>> {
         let route = routes::session_peers(&self.inner.workspace_id, &self.inner.id);
         let page: PeersPageResponse = self.inner.http.get(&route, &[]).await?;
-        Ok(page
-            .items
+        page.items
             .into_iter()
             .map(|resp| {
                 crate::Peer::from_parts(
@@ -680,7 +673,7 @@ impl Session {
                     resp,
                 )
             })
-            .collect())
+            .collect()
     }
 
     // ── F6.3: Per-peer configuration ───────────────────────────────────
@@ -766,7 +759,7 @@ impl Session {
 
         Ok(responses
             .into_iter()
-            .map(|r| Message::from_raw(self.inner.http.clone(), self.inner.workspace_id.clone(), r))
+            .map(|r| Message::from_raw(self.inner.workspace_id.clone(), r))
             .collect())
     }
 
@@ -788,12 +781,11 @@ impl Session {
         let page: crate::types::pagination::Page<MessageResponse> =
             crate::types::pagination::paginate_post(&self.inner.http, &route, None, 1, 50, false)
                 .await?;
-        let http = self.inner.http.clone();
         let ws = self.inner.workspace_id.clone();
         let messages: Vec<Message> = page
             .items()
             .into_iter()
-            .map(|r| Message::from_raw(http.clone(), ws.clone(), r))
+            .map(|r| Message::from_raw(ws.clone(), r))
             .collect();
         Ok(crate::types::pagination::Page::new(
             messages,
@@ -939,11 +931,7 @@ impl Session {
     pub async fn get_message(&self, id: &str) -> Result<Message> {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
         let resp: MessageResponse = self.inner.http.get(&route, &[]).await?;
-        Ok(Message::from_raw(
-            self.inner.http.clone(),
-            self.inner.workspace_id.clone(),
-            resp,
-        ))
+        Ok(Message::from_raw(self.inner.workspace_id.clone(), resp))
     }
 
     /// Update a message's metadata.
@@ -967,11 +955,7 @@ impl Session {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
         let body = crate::types::message::MessageMetadataSet { metadata };
         let resp: MessageResponse = self.inner.http.put(&route, Some(&body), &[]).await?;
-        Ok(Message::from_raw(
-            self.inner.http.clone(),
-            self.inner.workspace_id.clone(),
-            resp,
-        ))
+        Ok(Message::from_raw(self.inner.workspace_id.clone(), resp))
     }
 
     // ── F6.6: Context ───────────────────────────────────────────────────
@@ -1140,7 +1124,7 @@ impl Session {
             self.inner.http.post(&route, Some(&options), &[]).await?;
         Ok(responses
             .into_iter()
-            .map(|r| Message::from_raw(self.inner.http.clone(), self.inner.workspace_id.clone(), r))
+            .map(|r| Message::from_raw(self.inner.workspace_id.clone(), r))
             .collect())
     }
 

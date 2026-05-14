@@ -242,10 +242,8 @@ impl BlockingChatStreamBuilder {
     /// Send and return an iterator over SSE chunks.
     pub fn send(self) -> Result<ChatStreamIterator> {
         let stream = block_on(self.inner.send())?;
-        let boxed: DialecticStream<Pin<Box<dyn Stream<Item = Result<String>> + Send>>> =
-            DialecticStream::new(Box::pin(stream));
         Ok(ChatStreamIterator {
-            inner: BlockingIter::new(boxed),
+            inner: BlockingIter::new(stream),
         })
     }
 }

@@ -371,7 +371,7 @@ impl Honcho {
             .http
             .post(&routes::peers(&self.inner.workspace_id), Some(&body), &[])
             .await?;
-        Ok(Peer::from_response(self, resp))
+        Peer::from_response(self, resp)
     }
 
     /// Get or create a session by ID.
@@ -433,13 +433,7 @@ impl Honcho {
             .await?;
         Ok(responses
             .into_iter()
-            .map(|r| {
-                crate::Message::from_raw(
-                    self.inner.http.clone(),
-                    self.inner.workspace_id.clone(),
-                    r,
-                )
-            })
+            .map(|r| crate::Message::from_raw(self.inner.workspace_id.clone(), r))
             .collect())
     }
 

@@ -178,6 +178,27 @@ impl SessionContextOptions {
                 "peer_perspective requires peer_target to be set".into(),
             ));
         }
+        if let Some(k) = self.search_top_k
+            && !(1..=100).contains(&k)
+        {
+            return Err(crate::error::HonchoError::Validation(
+                "search_top_k must be between 1 and 100".into(),
+            ));
+        }
+        if let Some(d) = self.search_max_distance
+            && !(0.0..=1.0).contains(&d)
+        {
+            return Err(crate::error::HonchoError::Validation(
+                "search_max_distance must be between 0.0 and 1.0".into(),
+            ));
+        }
+        if let Some(m) = self.max_conclusions
+            && !(1..=100).contains(&m)
+        {
+            return Err(crate::error::HonchoError::Validation(
+                "max_conclusions must be between 1 and 100".into(),
+            ));
+        }
         Ok(())
     }
 }

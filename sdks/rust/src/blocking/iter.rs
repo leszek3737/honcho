@@ -1,4 +1,6 @@
+use std::future::Future;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use futures_util::Stream;
 
@@ -9,10 +11,7 @@ pub(crate) struct BlockingIter<S> {
 }
 
 impl<S> BlockingIter<S> {
-    pub(crate) fn new(stream: S) -> Self
-    where
-        S: Unpin,
-    {
+    pub(crate) fn new(stream: S) -> Self {
         Self {
             stream: Box::pin(stream),
         }
@@ -23,14 +22,28 @@ impl<S> BlockingIter<S> {
     }
 }
 
+struct StreamNext<'a, S> {
+    stream: &'a mut Pin<Box<S>>,
+}
+
+impl<S: Stream> Future for StreamNext<'_, S> {
+    type Output = Option<S::Item>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.stream.as_mut().poll_next(cx)
+    }
+}
+
 impl<S> Iterator for BlockingIter<S>
 where
-    S: Stream + Unpin,
+    S: Stream,
 {
     type Item = S::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        block_on(futures_util::StreamExt::next(&mut self.stream))
+        block_on(StreamNext {
+            stream: &mut self.stream,
+        })
     }
 }
 

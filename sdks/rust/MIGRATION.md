@@ -57,6 +57,16 @@ session.context_with_options(&opts).await?;
 
 `context_with_options` now takes `&SessionContextOptions` instead of `(bool, bool)`. The old `(summary, limit_to_session)` tuple is replaced by the corresponding fields on the options struct. `context()` still works the same (delegates with `summary(true)`).
 
+> **Important:** When setting `peer_perspective` or `peer_target`, call `.validate()?` after `.build()`:
+> ```rust
+> let opts = SessionContextOptions::builder()
+>     .peer_perspective("alice")
+>     .peer_target("bob")
+>     .build();
+> opts.validate()?;
+> session.context_with_options(&opts).await?;
+> ```
+
 ### R-07: `Page::next_page`
 
 **Before:**
@@ -93,59 +103,62 @@ let all: Vec<T> = collect_all_pages(page).await?;
 
 All `bon::Builder` structs now use `#[builder(finish_fn = build)]`. This was already the case in 0.1.0 but is now enforced as a convention. No migration needed — existing code calling `.build()` continues to work.
 
----
-
-### Pagination error propagation (0.2.0)
-
-`Page::next_page()` and `collect_all_pages()` now return `Result` so HTTP and decode errors surface instead of being silently swallowed.
-
-#### `Page::next_page`
+### SessionConfiguration: typed session config replaces `HashMap`
 
 **Before (0.1.x):**
 ```rust
-let mut page = client.list_peers().await?;
-while let Some(current) = page {
-    for peer in &current.items {
-        // ...
-    }
-    page = current.next_page().await;
-}
+let config: HashMap<String, Value> = session.get_configuration().await?;
+let model = config.get("model").and_then(|v| v.as_str());
 ```
 
 **After (0.2.0):**
 ```rust
-let mut page = Some(client.list_peers().await?);
-while let Some(current) = page {
-    for peer in &current.items {
-        // ...
-    }
-    page = current.next_page().await?;
-}
+use honcho_ai::types::session::SessionConfiguration;
+let config = session.get_configuration().await?;
+let enabled = config.reasoning.map(|r| r.enabled).flatten();
 ```
 
-`next_page()` returns `Result<Option<Page<T>>>`. Add `?` to propagate errors. A failed request now returns `Err` instead of silently becoming `None`.
+`get_configuration()` returns `SessionConfiguration` (typed struct) instead of `HashMap<String, Value>`. Access fields directly: `config.reasoning`, `config.summary`, `config.peer_card`, `config.dream`. Use `get_configuration_raw()` for untyped access.
 
-#### `collect_all_pages`
+`set_configuration()` takes `&SessionConfiguration` instead of `HashMap<String, Value>`:
+```rust
+let config = SessionConfiguration {
+    summary: Some(SummaryConfiguration {
+        enabled: Some(false),
+        ..Default::default()
+    }),
+    ..Default::default()
+};
+session.set_configuration(&config).await?;
+```
+
+### PeerConfig: typed peer config replaces `HashMap`
 
 **Before (0.1.x):**
 ```rust
-let peers: Vec<Peer> = collect_all_pages(client.list_peers().await?).await;
+let mut config = HashMap::new();
+config.insert("observe_me".to_owned(), json!(true));
+peer.set_configuration(config).await?;
 ```
 
 **After (0.2.0):**
 ```rust
-let peers: Vec<Peer> = collect_all_pages(client.list_peers().await?).await?;
+use honcho_ai::PeerConfig;
+let config = PeerConfig {
+    observe_me: Some(true),
+    observe_others: None,
+    ..Default::default()
+};
+peer.set_configuration(&config).await?;
 ```
 
-`collect_all_pages` returns `Result<Vec<T>>`. Add `?` to propagate errors from any page fetch.
+`get_configuration()` returns `PeerConfig`, `set_configuration()` takes `&PeerConfig`. Use `get_configuration_raw()` / `set_configuration_raw()` for untyped access (escape hatch).
 
-#### `Page::into_stream`
+### Removed: `Peer::card()`
 
-No change. Stream items were already `Result<T>` in 0.1.x:
-
+`Peer::card()` has been removed (deprecated since 0.1.0). Use `Peer::get_card()` instead:
 ```rust
-let mut stream = std::pin::pin!(page.into_stream());
-while let Some(result) = futures_util::StreamExt::next(&mut stream).await {
-    let item: T = result?;
-}
+// Before: peer.card().await
+// After:
+let card = peer.get_card().await?;
 ```

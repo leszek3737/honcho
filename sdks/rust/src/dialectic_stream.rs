@@ -35,6 +35,13 @@ pub struct FinalResponse {
 }
 
 impl FinalResponse {
+    /// Create a new `FinalResponse` from the accumulated content.
+    pub fn new(content: impl Into<String>) -> Self {
+        Self {
+            content: content.into(),
+        }
+    }
+
     /// Access the accumulated response text.
     #[must_use]
     pub fn content(&self) -> &str {

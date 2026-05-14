@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **R-08**: `collect_all_pages` now returns `Result<Vec<T>>` instead of `Vec<T>`. Pagination errors are no longer silently dropped.
 - **R-20**: Session message methods (`add_messages`, `get_message`, `update_message`, `search`, `search_with_options`) now return `Message` (accessor methods) instead of `MessageResponse` (direct field access). Blocking equivalents also updated.
 - **R-22**: All `bon::Builder` structs use `finish_fn = build`. No migration needed if already calling `.build()`.
-- **R-27**: `DialecticStream::final_response` returns `FinalResponse` struct (`.content` field) instead of `&str`. *(not yet implemented)*
+- **R-27**: `DialecticStream::final_response` returns `FinalResponse` struct (`.content` field) instead of `&str`.
 
 ### Added
 

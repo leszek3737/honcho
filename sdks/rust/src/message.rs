@@ -7,7 +7,6 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 
-use crate::http::client::HttpClient;
 use crate::types::message::MessageResponse;
 
 pub(crate) struct MessageInner {
@@ -32,8 +31,7 @@ pub struct Message {
 
 impl Message {
     #[allow(clippy::needless_pass_by_value)]
-    pub(crate) fn from_raw(http: HttpClient, workspace_id: String, resp: MessageResponse) -> Self {
-        let _ = http;
+    pub(crate) fn from_raw(workspace_id: String, resp: MessageResponse) -> Self {
         Self {
             inner: Arc::new(MessageInner {
                 workspace_id,
@@ -155,7 +153,7 @@ mod tests {
     }
 
     fn make_msg(honcho: &crate::Honcho, resp: MessageResponse) -> Message {
-        Message::from_raw(honcho.http().clone(), honcho.workspace_id().to_owned(), resp)
+        Message::from_raw(honcho.workspace_id().to_owned(), resp)
     }
 
     #[test]
