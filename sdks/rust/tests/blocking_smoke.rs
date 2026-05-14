@@ -707,7 +707,6 @@ async fn blocking_client_schedule_dream() {
         .and(body_json(serde_json::json!({
             "observer": "alice",
             "observed": "alice",
-            "session_id": null,
             "dream_type": "omni"
         })))
         .respond_with(ResponseTemplate::new(200))

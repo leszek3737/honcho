@@ -189,7 +189,7 @@ async fn peer_chat_basic_query() {
 
     Mock::given(method("POST"))
         .and(path("/v3/workspaces/ws1/peers/alice/chat"))
-        .and(body_json(&json!({"query": "hello", "stream": false})))
+        .and(body_json(&json!({"query": "hello"})))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "content": "Hi there!"
         })))

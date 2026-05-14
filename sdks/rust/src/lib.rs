@@ -55,8 +55,10 @@ pub use types::dialectic::DialecticOptions;
 pub use types::message::{MessageCreate, MessageResponse, MessageSearchOptions};
 pub use types::peer::PeerContext;
 pub use types::session::{
-    SessionContext, SessionContextOptions, SessionPeerConfig, SessionSummaries,
+    SessionConfiguration, SessionContext, SessionContextOptions, SessionPeerConfig,
+    SessionSummaries,
 };
+pub use types::workspace::WorkspaceConfiguration;
 
 #[cfg(feature = "blocking")]
 pub mod blocking;

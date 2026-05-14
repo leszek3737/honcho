@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use honcho_ai::Honcho;
 use honcho_ai::Session;
 use honcho_ai::session::PeerSpec;
-use honcho_ai::types::session::SessionPeerConfig;
+use honcho_ai::types::session::{SessionConfiguration, SessionPeerConfig};
 use serde_json::{Value, json};
 use wiremock::matchers::{body_json, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -34,7 +34,7 @@ fn session_response_json() -> Value {
         "workspace_id": "ws1",
         "is_active": true,
         "metadata": {"topic": "test"},
-        "configuration": {"model": "gpt-4"},
+        "configuration": {"reasoning": {"enabled": true}},
         "created_at": "2025-01-15T10:30:00Z"
     })
 }
@@ -112,7 +112,8 @@ async fn session_configuration_returns_cached() {
     let server = MockServer::start().await;
     let session = make_session(&server).await;
     let config = session.configuration().unwrap();
-    assert_eq!(config.get("model").unwrap(), "gpt-4");
+    assert!(config.reasoning.is_some());
+    assert_eq!(config.reasoning.unwrap().enabled, Some(true));
 }
 
 #[tokio::test]
@@ -122,7 +123,7 @@ async fn session_refresh_updates_caches() {
 
     let updated = session_response_with(
         json!({"topic": "updated", "priority": 1}),
-        json!({"model": "claude"}),
+        json!({"reasoning": {"enabled": false}}),
     );
 
     Mock::given(method("POST"))
@@ -138,7 +139,7 @@ async fn session_refresh_updates_caches() {
     assert_eq!(meta.get("priority").unwrap(), 1);
 
     let config = session.configuration().unwrap();
-    assert_eq!(config.get("model").unwrap(), "claude");
+    assert_eq!(config.reasoning.unwrap().enabled, Some(false));
 }
 
 #[tokio::test]
@@ -166,7 +167,7 @@ async fn session_set_metadata_puts_to_session_endpoint() {
     let mut new_meta = HashMap::new();
     new_meta.insert("updated".to_owned(), json!(true));
 
-    let resp = session_response_with(json!({"updated": true}), json!({"model": "gpt-4"}));
+    let resp = session_response_with(json!({"updated": true}), json!({}));
 
     Mock::given(method("PUT"))
         .and(path("/v3/workspaces/ws1/sessions/sess1"))
@@ -186,7 +187,7 @@ async fn session_get_configuration_returns_from_cache() {
     let server = MockServer::start().await;
     let session = make_session(&server).await;
 
-    let updated = session_response_with(json!({}), json!({"theme": "dark"}));
+    let updated = session_response_with(json!({}), json!({"summary": {"enabled": true}}));
 
     Mock::given(method("POST"))
         .and(path("/v3/workspaces/ws1/sessions"))
@@ -195,7 +196,7 @@ async fn session_get_configuration_returns_from_cache() {
         .await;
 
     let config = session.get_configuration().await.unwrap();
-    assert_eq!(config.get("theme").unwrap(), "dark");
+    assert_eq!(config.summary.unwrap().enabled, Some(true));
 }
 
 #[tokio::test]
@@ -203,22 +204,27 @@ async fn session_set_configuration_puts_to_session_endpoint() {
     let server = MockServer::start().await;
     let session = make_session(&server).await;
 
-    let mut new_config = HashMap::new();
-    new_config.insert("mode".to_owned(), json!("fast"));
+    let new_config: SessionConfiguration =
+        serde_json::from_value(json!({"summary": {"enabled": false}})).unwrap();
 
-    let resp = session_response_with(json!({"topic": "test"}), json!({"mode": "fast"}));
+    let resp = session_response_with(
+        json!({"topic": "test"}),
+        json!({"summary": {"enabled": false}}),
+    );
 
     Mock::given(method("PUT"))
         .and(path("/v3/workspaces/ws1/sessions/sess1"))
-        .and(body_json(json!({"configuration": {"mode": "fast"}})))
+        .and(body_json(
+            json!({"configuration": {"summary": {"enabled": false}}}),
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(&resp))
         .mount(&server)
         .await;
 
-    session.set_configuration(new_config).await.unwrap();
+    session.set_configuration(&new_config).await.unwrap();
 
     let cached = session.configuration().unwrap();
-    assert_eq!(cached.get("mode").unwrap(), "fast");
+    assert_eq!(cached.summary.unwrap().enabled, Some(false));
 }
 
 // ── F6.2: Peer Management ────────────────────────────────────────────

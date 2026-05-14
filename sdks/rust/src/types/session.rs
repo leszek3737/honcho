@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-pub use super::dream::{DreamConfiguration, ReasoningConfiguration, SessionQueueStatus};
+pub use super::common::{
+    DreamConfiguration, PeerCardConfiguration, ReasoningConfiguration, SummaryConfiguration,
+};
+pub use super::dream::SessionQueueStatus;
 
 /// A conversation session containing messages between peers.
 #[non_exhaustive]
@@ -21,8 +24,8 @@ pub struct Session {
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub metadata: HashMap<String, serde_json::Value>,
     /// Session-level configuration overrides.
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub configuration: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub configuration: SessionConfiguration,
     /// When the session was created.
     pub created_at: DateTime<Utc>,
 }
@@ -71,12 +74,28 @@ pub struct SessionGet {
     pub filters: Option<HashMap<String, serde_json::Value>>,
 }
 
+/// Request body for setting session metadata.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize)]
+pub struct SessionMetadataSet {
+    /// Metadata to set.
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Request body for setting session configuration.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize)]
+pub struct SessionConfigurationSet {
+    /// Configuration to set.
+    pub configuration: HashMap<String, serde_json::Value>,
+}
+
 /// Session-level configuration overrides.
 ///
 /// All fields are optional. Session-level configuration overrides
 /// workspace-level configuration, which overrides global configuration.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SessionConfiguration {
     /// Configuration for reasoning functionality.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,33 +115,6 @@ pub struct SessionConfiguration {
     /// and these settings will be ignored.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dream: Option<DreamConfiguration>,
-}
-
-/// Configuration for peer card generation and usage.
-#[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PeerCardConfiguration {
-    /// Whether to use peer card during the reasoning process.
-    #[serde(rename = "use", skip_serializing_if = "Option::is_none")]
-    pub use_peer_card: Option<bool>,
-    /// Whether to generate a peer card based on content.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub create: Option<bool>,
-}
-
-/// Configuration for automatic session summarization.
-#[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SummaryConfiguration {
-    /// Whether to enable summary functionality.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub enabled: Option<bool>,
-    /// Number of messages per short summary (minimum 10).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub messages_per_short_summary: Option<u32>,
-    /// Number of messages per long summary (minimum 20).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub messages_per_long_summary: Option<u32>,
 }
 
 /// Per-peer observation settings within a session.
@@ -175,6 +167,18 @@ pub struct SessionContextOptions {
     /// Maximum number of conclusions to include.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_conclusions: Option<u32>,
+}
+
+impl SessionContextOptions {
+    /// Validate cross-field constraints.
+    pub fn validate(&self) -> std::result::Result<(), crate::error::HonchoError> {
+        if self.peer_perspective.is_some() && self.peer_target.is_none() {
+            return Err(crate::error::HonchoError::Validation(
+                "peer_perspective requires peer_target to be set".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 fn default_true() -> bool {

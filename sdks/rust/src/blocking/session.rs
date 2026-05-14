@@ -8,7 +8,7 @@ use crate::FileSource;
 use crate::error::Result;
 use crate::session::PeerSpec;
 use crate::types::message::MessageSearchOptions;
-use crate::types::session::SessionPeerConfig;
+use crate::types::session::{SessionConfiguration, SessionPeerConfig};
 
 use super::runtime::block_on;
 
@@ -43,7 +43,7 @@ impl Session {
 
     /// Cached configuration.
     #[must_use]
-    pub fn configuration(&self) -> Option<HashMap<String, Value>> {
+    pub fn configuration(&self) -> Option<SessionConfiguration> {
         self.inner.configuration()
     }
 
@@ -63,13 +63,23 @@ impl Session {
     }
 
     /// Fetch and return configuration.
-    pub fn get_configuration(&self) -> Result<HashMap<String, Value>> {
+    pub fn get_configuration(&self) -> Result<SessionConfiguration> {
         block_on(self.inner.get_configuration())
     }
 
     /// Set configuration on the server.
-    pub fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
+    pub fn set_configuration(&self, configuration: &SessionConfiguration) -> Result<()> {
         block_on(self.inner.set_configuration(configuration))
+    }
+
+    /// Fetch configuration as a raw JSON map.
+    pub fn get_configuration_raw(&self) -> Result<HashMap<String, Value>> {
+        block_on(self.inner.get_configuration_raw())
+    }
+
+    /// Set configuration from a raw JSON map.
+    pub fn set_configuration_raw(&self, configuration: HashMap<String, Value>) -> Result<()> {
+        block_on(self.inner.set_configuration_raw(configuration))
     }
 
     /// Add a single peer to this session.

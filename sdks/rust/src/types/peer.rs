@@ -67,17 +67,23 @@ pub struct PeerGet {
     pub filters: Option<HashMap<String, serde_json::Value>>,
 }
 
-/// Configuration for peer card behavior.
+/// Request body for setting peer metadata.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct PeerCardConfiguration {
-    /// Whether to use the peer card during the reasoning process.
-    #[serde(rename = "use", default, skip_serializing_if = "Option::is_none")]
-    pub use_peer_card: Option<bool>,
-    /// Whether to generate a peer card based on content.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub create: Option<bool>,
+#[derive(Debug, Clone, Serialize)]
+pub struct PeerMetadataSet {
+    /// Metadata to set.
+    pub metadata: HashMap<String, serde_json::Value>,
 }
+
+/// Request body for setting peer configuration.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize)]
+pub struct PeerConfigurationSet {
+    /// Configuration to set.
+    pub configuration: HashMap<String, serde_json::Value>,
+}
+
+pub use super::common::PeerCardConfiguration;
 
 /// Response from getting a peer card.
 #[non_exhaustive]

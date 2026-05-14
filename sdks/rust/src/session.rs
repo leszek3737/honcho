@@ -16,7 +16,7 @@ use crate::http::routes;
 use crate::message::Message;
 use crate::types::message::MessageResponse;
 use crate::types::session::Session as SessionResponse;
-use crate::types::session::SessionPeerConfig;
+use crate::types::session::{SessionConfiguration, SessionPeerConfig};
 use crate::upload::{self, FileSource};
 
 pub(crate) struct SessionInner {
@@ -25,7 +25,7 @@ pub(crate) struct SessionInner {
     id: String,
     is_active: AtomicBool,
     metadata: RwLock<Option<HashMap<String, Value>>>,
-    configuration: RwLock<Option<HashMap<String, Value>>>,
+    configuration: RwLock<Option<SessionConfiguration>>,
 }
 
 /// A session in a Honcho workspace.
@@ -363,7 +363,7 @@ impl Session {
     /// # }
     /// ```
     #[must_use]
-    pub fn configuration(&self) -> Option<HashMap<String, Value>> {
+    pub fn configuration(&self) -> Option<SessionConfiguration> {
         self.inner
             .configuration
             .read()
@@ -384,7 +384,12 @@ impl Session {
     /// # }
     /// ```
     pub async fn refresh(&self) -> Result<()> {
-        let body = serde_json::json!({"id": self.inner.id});
+        let body = crate::types::session::SessionCreate {
+            id: self.inner.id.clone(),
+            metadata: None,
+            peers: None,
+            configuration: None,
+        };
         let resp: SessionResponse = self
             .inner
             .http
@@ -444,7 +449,7 @@ impl Session {
     /// # }
     /// ```
     pub async fn set_metadata(&self, metadata: HashMap<String, Value>) -> Result<()> {
-        let body = serde_json::json!({"metadata": metadata});
+        let body = crate::types::session::SessionMetadataSet { metadata };
         let resp: SessionResponse = self
             .inner
             .http
@@ -472,7 +477,7 @@ impl Session {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_configuration(&self) -> Result<HashMap<String, Value>> {
+    pub async fn get_configuration(&self) -> Result<SessionConfiguration> {
         self.refresh().await?;
         Ok(self
             .inner
@@ -489,13 +494,66 @@ impl Session {
     ///
     /// ```no_run
     /// # async fn example(session: &honcho_ai::Session) -> honcho_ai::error::Result<()> {
-    /// let mut config = std::collections::HashMap::new();
-    /// config.insert("model".into(), "gpt-4".into());
-    /// session.set_configuration(config).await?;
+    /// use honcho_ai::types::session::SessionConfiguration;
+    /// let config = SessionConfiguration::default();
+    /// session.set_configuration(&config).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
+    pub async fn set_configuration(&self, configuration: &SessionConfiguration) -> Result<()> {
+        let body = serde_json::json!({"configuration": configuration});
+        let resp: SessionResponse = self
+            .inner
+            .http
+            .put(
+                &routes::session(&self.inner.workspace_id, &self.inner.id),
+                Some(&body),
+                &[],
+            )
+            .await?;
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
+        Ok(())
+    }
+
+    /// Fetch session configuration as a raw JSON map.
+    ///
+    /// Prefer [`get_configuration`](Self::get_configuration) for typed access.
+    /// Use this when the server returns fields not yet represented in
+    /// [`SessionConfiguration`].
+    pub async fn get_configuration_raw(&self) -> Result<HashMap<String, Value>> {
+        let body = crate::types::session::SessionCreate {
+            id: self.inner.id.clone(),
+            metadata: None,
+            peers: None,
+            configuration: None,
+        };
+        let raw: serde_json::Value = self
+            .inner
+            .http
+            .post(
+                &routes::sessions(&self.inner.workspace_id),
+                Some(&body),
+                &[],
+            )
+            .await?;
+        match raw.get("configuration") {
+            Some(serde_json::Value::Object(map)) => {
+                Ok(map.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+            }
+            _ => Ok(HashMap::new()),
+        }
+    }
+
+    /// Set session configuration from a raw JSON map.
+    ///
+    /// Prefer [`set_configuration`](Self::set_configuration) for typed access.
+    /// Use this when you need to send fields not yet represented in
+    /// [`SessionConfiguration`].
+    pub async fn set_configuration_raw(&self, configuration: HashMap<String, Value>) -> Result<()> {
         let body = serde_json::json!({"configuration": configuration});
         let resp: SessionResponse = self
             .inner
@@ -687,15 +745,16 @@ impl Session {
         let route = routes::messages(&self.inner.workspace_id, &self.inner.id);
 
         let responses: Vec<MessageResponse> = if messages.len() <= 100 {
-            let body = serde_json::json!({"messages": messages});
+            let body = crate::types::message::MessageBatchCreate { messages };
             self.inner.http.post(&route, Some(&body), &[]).await?
         } else {
             let mut all = Vec::with_capacity(messages.len());
             for chunk in messages.chunks(100) {
-                let body = serde_json::json!({"messages": chunk});
-                let batch: Vec<MessageResponse> =
+                let batch = chunk.to_vec();
+                let body = crate::types::message::MessageBatchCreate { messages: batch };
+                let batch_responses: Vec<MessageResponse> =
                     self.inner.http.post(&route, Some(&body), &[]).await?;
-                all.extend(batch);
+                all.extend(batch_responses);
             }
             all
         };
@@ -901,7 +960,7 @@ impl Session {
         metadata: HashMap<String, Value>,
     ) -> Result<Message> {
         let route = routes::message(&self.inner.workspace_id, &self.inner.id, id);
-        let body = serde_json::json!({"metadata": metadata});
+        let body = crate::types::message::MessageMetadataSet { metadata };
         let resp: MessageResponse = self.inner.http.put(&route, Some(&body), &[]).await?;
         Ok(Message::from_raw(
             self.inner.http.clone(),
@@ -930,6 +989,7 @@ impl Session {
             .summary(true)
             .limit_to_session(false)
             .build();
+        opts.validate()?;
         self.context_with_options(&opts).await
     }
 
@@ -950,6 +1010,7 @@ impl Session {
         &self,
         options: &crate::types::session::SessionContextOptions,
     ) -> Result<crate::types::session::SessionContext> {
+        options.validate()?;
         let route = routes::session_context(&self.inner.workspace_id, &self.inner.id);
         let mut params: Vec<(&str, String)> = vec![
             (

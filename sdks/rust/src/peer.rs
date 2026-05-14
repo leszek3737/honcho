@@ -200,7 +200,7 @@ impl Peer {
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self, metadata), fields(peer_id = self.inner.id.as_str())))]
     pub async fn set_metadata(&self, metadata: HashMap<String, Value>) -> Result<()> {
-        let body = serde_json::json!({"metadata": metadata});
+        let body = crate::types::peer::PeerMetadataSet { metadata };
         let resp: PeerResponse = self
             .inner
             .http
@@ -254,7 +254,7 @@ impl Peer {
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self, configuration), fields(peer_id = self.inner.id.as_str())))]
     pub async fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
-        let body = serde_json::json!({"configuration": configuration});
+        let body = crate::types::peer::PeerConfigurationSet { configuration };
         let resp: PeerResponse = self
             .inner
             .http
@@ -286,7 +286,7 @@ impl Peer {
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self, metadata), fields(peer_id = self.inner.id.as_str())))]
     pub async fn update(&self, metadata: HashMap<String, Value>) -> Result<()> {
-        let body = serde_json::json!({"metadata": metadata});
+        let body = crate::types::peer::PeerMetadataSet { metadata };
         let resp: PeerResponse = self
             .inner
             .http
@@ -328,10 +328,13 @@ impl Peer {
                 "query must not be empty".to_owned(),
             ));
         }
-        let body = serde_json::json!({
-            "query": query,
-            "stream": false,
-        });
+        let body = crate::types::dialectic::DialecticOptions {
+            query: query.to_owned(),
+            session_id: None,
+            target: None,
+            stream: false,
+            reasoning_level: crate::types::dialectic::ReasoningLevel::default(),
+        };
         let resp: ChatResponse = self
             .inner
             .http
@@ -431,7 +434,15 @@ impl Peer {
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(peer_id = self.inner.id.as_str())))]
     pub async fn representation(&self) -> Result<String> {
         let route = routes::peer_representation(&self.inner.workspace_id, &self.inner.id);
-        let body = serde_json::json!({});
+        let body = crate::types::peer::PeerRepresentationGet {
+            session_id: None,
+            target: None,
+            search_query: None,
+            search_top_k: None,
+            search_max_distance: None,
+            include_most_frequent: None,
+            max_conclusions: None,
+        };
         let resp: RepresentationResponse = self.inner.http.post(&route, Some(&body), &[]).await?;
         Ok(resp.representation)
     }
@@ -591,11 +602,16 @@ impl Peer {
         let body = options
             .filters
             .as_ref()
-            .map(|f| serde_json::json!({"filters": f}));
+            .map(|f| crate::types::session::SessionGet {
+                filters: Some(f.clone()),
+            });
+        let body_val = body
+            .as_ref()
+            .map(|b| serde_json::to_value(b).unwrap_or_default());
         pagination::paginate_post(
             &self.inner.http,
             &route,
-            body.as_ref(),
+            body_val.as_ref(),
             options.page,
             options.size,
             options.reverse,
