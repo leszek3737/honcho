@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
+use reqwest::header::HeaderMap;
 use serde_json::Value;
 use tokio::sync::OnceCell;
 use url::Url;
@@ -70,6 +72,14 @@ pub struct HonchoParams {
     workspace_id: Option<String>,
     /// Custom `reqwest::Client`.
     http_client: Option<reqwest::Client>,
+    /// Request timeout. Falls back to `HttpClient` default (60s).
+    timeout: Option<Duration>,
+    /// Max retries for transient errors. Falls back to `HttpClient` default (2).
+    max_retries: Option<u32>,
+    /// Extra default headers sent with every request.
+    default_headers: Option<HeaderMap>,
+    /// Extra default query parameters appended to every request.
+    default_query: Option<Vec<(String, String)>>,
 }
 
 impl Honcho {
@@ -146,6 +156,10 @@ impl Honcho {
                 .base_url(resolved_base_url)
                 .maybe_api_key(resolved_api_key)
                 .maybe_http_client(params.http_client)
+                .timeout(params.timeout.unwrap_or(Duration::from_secs(60)))
+                .max_retries(params.max_retries.unwrap_or(2))
+                .default_headers(params.default_headers.unwrap_or_default())
+                .default_query(params.default_query.unwrap_or_default())
                 .build(),
         )?;
 

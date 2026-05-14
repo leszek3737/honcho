@@ -16,8 +16,6 @@ use crate::types::dialectic::RepresentationResponse;
 use crate::types::pagination::paginate_post;
 
 pub(crate) struct ConclusionInner {
-    #[expect(dead_code)]
-    http: HttpClient,
     workspace_id: String,
     id: String,
     content: String,
@@ -36,10 +34,11 @@ pub struct Conclusion {
 }
 
 impl Conclusion {
+    #[allow(clippy::needless_pass_by_value)]
     pub(crate) fn from_parts(http: HttpClient, workspace_id: String, resp: ConclusionData) -> Self {
+        let _ = http;
         Self {
             inner: Arc::new(ConclusionInner {
-                http,
                 workspace_id,
                 id: resp.id,
                 content: resp.content,
@@ -49,15 +48,6 @@ impl Conclusion {
                 created_at: resp.created_at,
             }),
         }
-    }
-
-    #[expect(dead_code)]
-    pub(crate) fn from_response(honcho: &crate::Honcho, resp: ConclusionData) -> Self {
-        Self::from_parts(
-            honcho.http().clone(),
-            honcho.workspace_id().to_owned(),
-            resp,
-        )
     }
 
     /// The conclusion's unique identifier.

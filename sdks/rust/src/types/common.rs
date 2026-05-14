@@ -5,9 +5,6 @@ use serde::{Deserialize, Serialize};
 /// JSON value alias for metadata and configuration fields.
 pub type JsonValue = serde_json::Value;
 
-/// Metadata map type.
-pub type Metadata = serde_json::Map<String, serde_json::Value>;
-
 /// Configuration for reasoning functionality.
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

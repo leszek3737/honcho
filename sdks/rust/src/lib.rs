@@ -45,7 +45,9 @@ pub mod upload;
 
 pub use client::Honcho;
 pub use conclusion::{Conclusion, ConclusionCreateParams, ConclusionScope};
-pub use dialectic_stream::{DialecticStream, FinalResponse};
+pub use dialectic_stream::{
+    DialecticStream, DialecticStreamChunk, DialecticStreamDelta, FinalResponse,
+};
 pub use message::Message;
 pub use peer::Peer;
 pub use session::{Session, UploadFileBuilder};

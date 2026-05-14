@@ -105,17 +105,29 @@ impl Peer {
         }
     }
 
+    /// Get a builder for fine-grained context parameters.
+    #[must_use]
+    pub fn context_builder(&self) -> BlockingContextBuilder {
+        BlockingContextBuilder {
+            inner: self.inner.context_builder(),
+        }
+    }
+
     /// Get the peer's context.
     pub fn context(&self) -> Result<PeerContext> {
         block_on(self.inner.context())
     }
 
     /// Get the peer's context scoped to a target.
+    #[deprecated(since = "0.2.0", note = "use `Peer::context_builder()` instead")]
+    #[allow(deprecated)]
     pub fn context_with_target(&self, target: &str) -> Result<PeerContext> {
         block_on(self.inner.context_with_target(target))
     }
 
     /// Get the peer's context with custom options.
+    #[deprecated(since = "0.2.0", note = "use `Peer::context_builder()` instead")]
+    #[allow(deprecated)]
     pub fn context_with_options(
         &self,
         options: &crate::types::peer::PeerContextOptions,
@@ -323,6 +335,82 @@ impl BlockingRepresentationBuilder {
 
     /// Send the representation request.
     pub fn send(self) -> Result<String> {
+        block_on(self.inner.send())
+    }
+}
+
+/// Blocking builder for fine-grained context requests.
+pub struct BlockingContextBuilder {
+    inner: crate::peer::ContextBuilder,
+}
+
+impl BlockingContextBuilder {
+    /// Scope to a target peer.
+    #[must_use]
+    pub fn target(self, val: impl Into<String>) -> Self {
+        Self {
+            inner: self.inner.target(val),
+        }
+    }
+
+    /// Whether to include the peer card summary.
+    #[must_use]
+    pub fn summary(self, val: bool) -> Self {
+        Self {
+            inner: self.inner.summary(val),
+        }
+    }
+
+    /// Limit to a specific session.
+    #[must_use]
+    pub fn limit_to_session(self, val: bool) -> Self {
+        Self {
+            inner: self.inner.limit_to_session(val),
+        }
+    }
+
+    /// Max conclusions (1–100).
+    #[must_use]
+    pub fn max_conclusions(self, val: u32) -> Self {
+        Self {
+            inner: self.inner.max_conclusions(val),
+        }
+    }
+
+    /// Semantic search query.
+    #[must_use]
+    pub fn search_query(self, val: impl Into<String>) -> Self {
+        Self {
+            inner: self.inner.search_query(val),
+        }
+    }
+
+    /// Top-K for semantic search (1–100).
+    #[must_use]
+    pub fn search_top_k(self, val: u32) -> Self {
+        Self {
+            inner: self.inner.search_top_k(val),
+        }
+    }
+
+    /// Max cosine distance (0.0–1.0).
+    #[must_use]
+    pub fn search_max_distance(self, val: f64) -> Self {
+        Self {
+            inner: self.inner.search_max_distance(val),
+        }
+    }
+
+    /// Include most frequent conclusions.
+    #[must_use]
+    pub fn include_most_frequent(self, val: bool) -> Self {
+        Self {
+            inner: self.inner.include_most_frequent(val),
+        }
+    }
+
+    /// Send the context request.
+    pub fn send(self) -> crate::error::Result<crate::types::peer::PeerContext> {
         block_on(self.inner.send())
     }
 }

@@ -377,7 +377,7 @@ impl<'de, TRaw: serde::Deserialize<'de> + 'static> serde::Deserialize<'de> for P
 /// TODO(F4): reduce visibility to `pub(crate)` once the high-level
 /// Honcho client exposes public paginated methods.
 #[doc(hidden)]
-pub async fn paginate_post<T>(
+pub(crate) async fn paginate_post<T>(
     http: &HttpClient,
     route: &str,
     body: Option<&serde_json::Value>,

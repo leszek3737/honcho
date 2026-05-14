@@ -279,14 +279,56 @@ fn default_size() -> u64 {
 /// A paginated list of sessions.
 pub type SessionPage = super::pagination::Page<Session>;
 
+/// Resolves an assistant name from various reference types.
+///
+/// Implemented for `&str`, `String`, and `&Peer` so that
+/// [`SessionContext::to_openai`] and [`SessionContext::to_anthropic`]
+/// can accept any of these without extra boilerplate.
+pub trait IntoAssistantRef {
+    /// Return the string name/id to use as the assistant.
+    fn as_assistant_name(&self) -> &str;
+}
+
+impl IntoAssistantRef for &str {
+    fn as_assistant_name(&self) -> &str {
+        self
+    }
+}
+
+impl IntoAssistantRef for String {
+    fn as_assistant_name(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl IntoAssistantRef for &crate::Peer {
+    fn as_assistant_name(&self) -> &str {
+        self.id()
+    }
+}
+
 impl SessionContext {
     /// Convert the context to OpenAI-compatible message format.
     ///
     /// System messages (`peer_representation`, `peer_card`, summary) are prepended.
     /// Assistant messages get `role: "assistant"`, all others get `role: "user"`.
     /// Each message also includes a `"name"` field set to the peer ID.
+    ///
+    /// `assistant` can be a `&str`, `String`, or `&Peer`.
+    ///
+    /// ```
+    /// use honcho_ai::types::session::SessionContext;
+    /// let ctx: SessionContext = serde_json::from_value(serde_json::json!({
+    ///     "id": "s1",
+    ///     "messages": [],
+    /// })).unwrap();
+    /// let messages = ctx.to_openai("assistant-1");
+    /// assert!(messages.is_empty());
+    /// ```
     #[must_use]
-    pub fn to_openai(&self, assistant: &str) -> Vec<serde_json::Value> {
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn to_openai(&self, assistant: impl IntoAssistantRef) -> Vec<serde_json::Value> {
+        let assistant = assistant.as_assistant_name();
         let mut result: Vec<serde_json::Value> = Vec::new();
 
         if let Some(ref rep) = self.peer_representation {
@@ -335,8 +377,12 @@ impl SessionContext {
     /// since Anthropic uses a separate `system` parameter.
     /// Assistant messages get `role: "assistant"`, others get `role: "user"` with
     /// `PEER_ID: CONTENT` format.
+    ///
+    /// `assistant` can be a `&str`, `String`, or `&Peer`.
     #[must_use]
-    pub fn to_anthropic(&self, assistant: &str) -> Vec<serde_json::Value> {
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn to_anthropic(&self, assistant: impl IntoAssistantRef) -> Vec<serde_json::Value> {
+        let assistant = assistant.as_assistant_name();
         let mut result: Vec<serde_json::Value> = Vec::new();
 
         if let Some(ref rep) = self.peer_representation {

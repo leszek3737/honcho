@@ -7,6 +7,27 @@ use futures_util::Stream;
 
 use crate::error::Result;
 
+/// A single delta in a streaming dialectic response.
+///
+/// Corresponds to `DialecticStreamDelta` in the Python SDK.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct DialecticStreamDelta {
+    /// The content string for this delta, if any.
+    pub content: Option<String>,
+}
+
+/// A chunk (SSE event) in a streaming dialectic response.
+///
+/// Corresponds to `DialecticStreamChunk` in the Python SDK.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct DialecticStreamChunk {
+    /// The delta payload within this chunk.
+    pub delta: DialecticStreamDelta,
+    /// Whether this is a terminal chunk.
+    #[serde(default)]
+    pub done: bool,
+}
+
 /// The fully-accumulated content of a completed dialectic stream.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FinalResponse {
