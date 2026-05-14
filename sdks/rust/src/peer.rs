@@ -20,7 +20,7 @@ use crate::types::dialectic::{DialecticOptions, ReasoningLevel};
 use crate::types::message::{MessageCreate, MessageResponse, MessageSearchOptions};
 use crate::types::pagination::{self, Page};
 use crate::types::peer::Peer as PeerResponse;
-use crate::types::peer::{PeerCardResponse, PeerCardSet, PeerContext};
+use crate::types::peer::{PeerCardResponse, PeerCardSet, PeerConfig, PeerContext};
 use crate::types::session::{Session, SessionListOptions};
 
 pub(crate) struct PeerInner {
@@ -28,7 +28,7 @@ pub(crate) struct PeerInner {
     workspace_id: String,
     id: String,
     metadata: RwLock<Option<HashMap<String, Value>>>,
-    configuration: RwLock<Option<HashMap<String, Value>>>,
+    configuration: RwLock<Option<PeerConfig>>,
 }
 
 /// A peer in a Honcho workspace.
@@ -57,13 +57,14 @@ impl std::fmt::Debug for Peer {
 
 impl Peer {
     pub(crate) fn from_parts(http: HttpClient, workspace_id: String, resp: PeerResponse) -> Self {
+        let config = map_to_peer_config(&resp.configuration);
         Self {
             inner: Arc::new(PeerInner {
                 http,
                 workspace_id,
                 id: resp.id,
                 metadata: RwLock::new(Some(resp.metadata)),
-                configuration: RwLock::new(Some(resp.configuration)),
+                configuration: RwLock::new(config),
             }),
         }
     }
@@ -119,12 +120,12 @@ impl Peer {
     /// ```no_run
     /// # fn example(peer: &honcho_ai::Peer) {
     /// if let Some(config) = peer.configuration() {
-    ///     println!("{config:?}");
+    ///     println!("observe_me: {:?}", config.observe_me);
     /// }
     /// # }
     /// ```
     #[must_use]
-    pub fn configuration(&self) -> Option<HashMap<String, Value>> {
+    pub fn configuration(&self) -> Option<PeerConfig> {
         self.inner
             .configuration
             .read()
@@ -145,7 +146,9 @@ impl Peer {
     /// # }
     /// ```
     pub async fn refresh(&self) -> Result<()> {
-        let body = serde_json::json!({"id": self.inner.id});
+        let mut body_map = serde_json::Map::new();
+        body_map.insert("id".into(), Value::String(self.inner.id.clone()));
+        let body = Value::Object(body_map);
         let resp: PeerResponse = self
             .inner
             .http
@@ -160,7 +163,7 @@ impl Peer {
             .inner
             .configuration
             .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = map_to_peer_config(&resp.configuration);
         Ok(())
     }
 
@@ -229,7 +232,7 @@ impl Peer {
     /// # }
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(peer_id = self.inner.id.as_str())))]
-    pub async fn get_configuration(&self) -> Result<HashMap<String, Value>> {
+    pub async fn get_configuration(&self) -> Result<PeerConfig> {
         self.refresh().await?;
         Ok(self
             .inner
@@ -246,15 +249,15 @@ impl Peer {
     ///
     /// ```no_run
     /// # async fn example(peer: &honcho_ai::Peer) -> honcho_ai::error::Result<()> {
-    /// let mut config = std::collections::HashMap::new();
-    /// config.insert("model".into(), "gpt-4".into());
-    /// peer.set_configuration(config).await?;
+    /// use honcho_ai::PeerConfig;
+    /// let config = PeerConfig { observe_me: Some(true), observe_others: None };
+    /// peer.set_configuration(&config).await?;
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self, configuration), fields(peer_id = self.inner.id.as_str())))]
-    pub async fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
-        let body = crate::types::peer::PeerConfigurationSet { configuration };
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self, config), fields(peer_id = self.inner.id.as_str())))]
+    pub async fn set_configuration(&self, config: &PeerConfig) -> Result<()> {
+        let body = crate::types::peer::PeerConfigurationSet { configuration: config.clone() };
         let resp: PeerResponse = self
             .inner
             .http
@@ -268,7 +271,60 @@ impl Peer {
             .inner
             .configuration
             .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.configuration);
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = map_to_peer_config(&resp.configuration);
+        Ok(())
+    }
+
+    /// Fetch and return the peer's configuration as a raw JSON map.
+    ///
+    /// Prefer [`get_configuration`](Self::get_configuration) for typed access.
+    /// Use this when the server returns fields not yet represented in
+    /// [`PeerConfig`].
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(peer_id = self.inner.id.as_str())))]
+    pub async fn get_configuration_raw(&self) -> Result<HashMap<String, Value>> {
+        let mut body_map = serde_json::Map::new();
+        body_map.insert("id".into(), Value::String(self.inner.id.clone()));
+        let body = Value::Object(body_map);
+        let resp: PeerResponse = self
+            .inner
+            .http
+            .post(&routes::peers(&self.inner.workspace_id), Some(&body), &[])
+            .await?;
+        *self
+            .inner
+            .metadata
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(resp.metadata.clone());
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = map_to_peer_config(&resp.configuration);
+        Ok(resp.configuration)
+    }
+
+    /// Set the peer's configuration on the server from a raw JSON map.
+    ///
+    /// Prefer [`set_configuration`](Self::set_configuration) for typed access.
+    /// Use this when you need to send fields not yet represented in
+    /// [`PeerConfig`].
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self, config), fields(peer_id = self.inner.id.as_str())))]
+    pub async fn set_configuration_raw(&self, config: HashMap<String, Value>) -> Result<()> {
+        let body = serde_json::json!({"configuration": config});
+        let resp: PeerResponse = self
+            .inner
+            .http
+            .put(
+                &routes::peer(&self.inner.workspace_id, &self.inner.id),
+                Some(&body),
+                &[],
+            )
+            .await?;
+        *self
+            .inner
+            .configuration
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = map_to_peer_config(&resp.configuration);
         Ok(())
     }
 
@@ -1413,6 +1469,11 @@ impl MessageBuilder {
             created_at: self.created_at,
         })
     }
+}
+
+fn map_to_peer_config(map: &HashMap<String, Value>) -> Option<PeerConfig> {
+    let val = serde_json::to_value(map).ok()?;
+    serde_json::from_value(val).ok()
 }
 
 #[cfg(test)]

@@ -56,6 +56,7 @@ pub use upload::FileSource;
 pub use types::dialectic::DialecticOptions;
 pub use types::message::{MessageCreate, MessageResponse, MessageSearchOptions};
 pub use types::peer::PeerContext;
+pub use types::peer::PeerConfig;
 pub use types::session::{
     SessionConfiguration, SessionContext, SessionContextOptions, SessionPeerConfig,
     SessionSummaries,

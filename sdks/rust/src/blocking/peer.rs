@@ -8,7 +8,7 @@ use crate::dialectic_stream::DialecticStream;
 use crate::error::Result;
 use crate::types::dialectic::{DialecticOptions, ReasoningLevel};
 use crate::types::message::MessageSearchOptions;
-use crate::types::peer::PeerContext;
+use crate::types::peer::{PeerConfig, PeerContext};
 use crate::types::session::Session;
 
 use super::conclusion::ConclusionScope;
@@ -40,7 +40,7 @@ impl Peer {
 
     /// Cached configuration.
     #[must_use]
-    pub fn configuration(&self) -> Option<HashMap<String, Value>> {
+    pub fn configuration(&self) -> Option<PeerConfig> {
         self.inner.configuration()
     }
 
@@ -60,13 +60,23 @@ impl Peer {
     }
 
     /// Fetch and return configuration, updating the cache.
-    pub fn get_configuration(&self) -> Result<HashMap<String, Value>> {
+    pub fn get_configuration(&self) -> Result<PeerConfig> {
         block_on(self.inner.get_configuration())
     }
 
     /// Set configuration on the server and update the cache.
-    pub fn set_configuration(&self, configuration: HashMap<String, Value>) -> Result<()> {
-        block_on(self.inner.set_configuration(configuration))
+    pub fn set_configuration(&self, config: &PeerConfig) -> Result<()> {
+        block_on(self.inner.set_configuration(config))
+    }
+
+    /// Fetch configuration as a raw JSON map.
+    pub fn get_configuration_raw(&self) -> Result<HashMap<String, Value>> {
+        block_on(self.inner.get_configuration_raw())
+    }
+
+    /// Set configuration from a raw JSON map.
+    pub fn set_configuration_raw(&self, config: HashMap<String, Value>) -> Result<()> {
+        block_on(self.inner.set_configuration_raw(config))
     }
 
     /// Patch-update metadata.

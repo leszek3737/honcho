@@ -120,6 +120,7 @@ pub struct SessionConfiguration {
 /// Per-peer observation settings within a session.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct SessionPeerConfig {
     /// Whether Honcho will use reasoning to form a representation of this peer.
     #[serde(skip_serializing_if = "Option::is_none")]

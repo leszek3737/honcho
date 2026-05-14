@@ -141,10 +141,10 @@ async fn peer_metadata_and_configuration_crud() {
 
     let mut config = HashMap::new();
     config.insert("language".to_owned(), json!("en"));
-    peer.set_configuration(config).await.unwrap();
+    peer.set_configuration_raw(config).await.unwrap();
 
-    let fetched_config = peer.get_configuration().await.unwrap();
-    assert_eq!(fetched_config.get("language").unwrap(), &json!("en"));
+    let fetched_config_raw = peer.get_configuration_raw().await.unwrap();
+    assert_eq!(fetched_config_raw.get("language").unwrap(), &json!("en"));
 
     let mut patch_meta = HashMap::new();
     patch_meta.insert("patched".to_owned(), json!(true));

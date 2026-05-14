@@ -16,7 +16,9 @@ use crate::http::routes;
 use crate::message::Message;
 use crate::types::message::MessageResponse;
 use crate::types::session::Session as SessionResponse;
-use crate::types::session::{SessionConfiguration, SessionPeerConfig};
+use crate::types::session::{
+    SessionConfiguration, SessionConfigurationSet, SessionPeerConfig, SessionUpdate,
+};
 use crate::upload::{self, FileSource};
 
 pub(crate) struct SessionInner {
@@ -501,7 +503,10 @@ impl Session {
     /// # }
     /// ```
     pub async fn set_configuration(&self, configuration: &SessionConfiguration) -> Result<()> {
-        let body = serde_json::json!({"configuration": configuration});
+        let body = SessionUpdate {
+            metadata: None,
+            configuration: Some(configuration.clone()),
+        };
         let resp: SessionResponse = self
             .inner
             .http
@@ -554,7 +559,7 @@ impl Session {
     /// Use this when you need to send fields not yet represented in
     /// [`SessionConfiguration`].
     pub async fn set_configuration_raw(&self, configuration: HashMap<String, Value>) -> Result<()> {
-        let body = serde_json::json!({"configuration": configuration});
+        let body = SessionConfigurationSet { configuration };
         let resp: SessionResponse = self
             .inner
             .http
@@ -1391,7 +1396,16 @@ fn normalize_peers(
         .map(|s| {
             let spec = s.into();
             let val = match &spec {
-                PeerSpec::Id(_) => serde_json::json!({}),
+                PeerSpec::Id(_) => serde_json::to_value(SessionPeerConfig {
+                    observe_me: None,
+                    observe_others: None,
+                })
+                .map_err(|e| {
+                    HonchoError::Configuration(format!(
+                        "failed to serialize peer config for {}: {e}",
+                        spec.id()
+                    ))
+                })?,
                 PeerSpec::WithConfig(_, cfg) => serde_json::to_value(cfg).map_err(|e| {
                     HonchoError::Configuration(format!(
                         "failed to serialize peer config for {}: {e}",
