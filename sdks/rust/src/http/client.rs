@@ -248,9 +248,16 @@ impl HttpClient {
             });
         }
 
-        decode::deserialize_with_path(&bytes)
+        match decode::deserialize_with_path(&bytes) {
+            Ok(val) => Ok(val),
+            Err(decode_err) => {
+                serde_json::from_value::<TResp>(serde_json::Value::Null).map_err(|_| decode_err)
+            }
+        }
     }
+}
 
+impl HttpClient {
     pub(crate) async fn get<TResp: DeserializeOwned + 'static>(
         &self,
         path: &str,
@@ -278,6 +285,7 @@ impl HttpClient {
         self.request(Method::PUT, path, body, query).await
     }
 
+    #[allow(dead_code)]
     pub(crate) async fn patch<TBody: Serialize + ?Sized, TResp: DeserializeOwned + 'static>(
         &self,
         path: &str,
