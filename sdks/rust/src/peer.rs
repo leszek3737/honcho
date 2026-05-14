@@ -255,7 +255,8 @@ impl Peer {
     /// ```no_run
     /// # async fn example(peer: &honcho_ai::Peer) -> honcho_ai::error::Result<()> {
     /// use honcho_ai::PeerConfig;
-    /// let config = PeerConfig { observe_me: Some(true), observe_others: None };
+    /// let mut config = PeerConfig::default();
+    /// config.observe_me = Some(true);
     /// peer.set_configuration(&config).await?;
     /// # Ok(())
     /// # }
@@ -598,7 +599,7 @@ impl Peer {
     }
 
     /// Get the peer's context scoped to a target peer.
-    #[deprecated(since = "0.2.0", note = "use `Peer::context_builder()` instead")]
+    #[deprecated(since = "0.1.1", note = "use `Peer::context_builder()` instead")]
     #[allow(deprecated)]
     pub async fn context_with_target(&self, target: &str) -> Result<PeerContext> {
         let opts = crate::types::peer::PeerContextOptions::builder()
@@ -608,7 +609,7 @@ impl Peer {
     }
 
     /// Get the peer's context with custom options.
-    #[deprecated(since = "0.2.0", note = "use `Peer::context_builder()` instead")]
+    #[deprecated(since = "0.1.1", note = "use `Peer::context_builder()` instead")]
     #[allow(deprecated)]
     pub async fn context_with_options(
         &self,

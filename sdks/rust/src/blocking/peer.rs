@@ -129,14 +129,14 @@ impl Peer {
     }
 
     /// Get the peer's context scoped to a target.
-    #[deprecated(since = "0.2.0", note = "use `Peer::context_builder()` instead")]
+    #[deprecated(since = "0.1.1", note = "use `Peer::context_builder()` instead")]
     #[allow(deprecated)]
     pub fn context_with_target(&self, target: &str) -> Result<PeerContext> {
         block_on(self.inner.context_with_target(target))
     }
 
     /// Get the peer's context with custom options.
-    #[deprecated(since = "0.2.0", note = "use `Peer::context_builder()` instead")]
+    #[deprecated(since = "0.1.1", note = "use `Peer::context_builder()` instead")]
     #[allow(deprecated)]
     pub fn context_with_options(
         &self,

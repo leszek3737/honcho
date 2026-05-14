@@ -1,6 +1,6 @@
 # Migration Guide
 
-## 0.1.0 → 0.2.0
+## 0.1.0 → 0.1.1
 
 ### R-27: `DialecticStream::final_response` returns `FinalResponse`
 
@@ -111,7 +111,7 @@ let config: HashMap<String, Value> = session.get_configuration().await?;
 let model = config.get("model").and_then(|v| v.as_str());
 ```
 
-**After (0.2.0):**
+**After (0.1.1):**
 ```rust
 use honcho_ai::types::session::SessionConfiguration;
 let config = session.get_configuration().await?;
@@ -141,7 +141,7 @@ config.insert("observe_me".to_owned(), json!(true));
 peer.set_configuration(config).await?;
 ```
 
-**After (0.2.0):**
+**After (0.1.1):**
 ```rust
 use honcho_ai::PeerConfig;
 let config = PeerConfig {

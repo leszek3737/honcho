@@ -464,7 +464,9 @@ mod tests {
     use crate::types::peer::Peer;
     use crate::types::workspace::Workspace;
     use std::time::Duration;
-    use wiremock::matchers::{body_json, header, header_exists, method, path, query_param};
+    use wiremock::matchers::{
+        body_json, header, header_exists, header_regex, method, path, query_param,
+    };
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     fn make_client(server: &MockServer) -> HttpClient {
@@ -1123,7 +1125,7 @@ mod tests {
 
         Mock::given(method("POST"))
             .and(path("/v3/upload"))
-            .and(header("content-type", "multipart/form-data"))
+            .and(header_regex("content-type", "multipart/form-data"))
             .respond_with(ResponseTemplate::new(200).set_body_json(workspace_json()))
             .mount(&server)
             .await;

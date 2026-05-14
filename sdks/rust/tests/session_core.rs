@@ -237,7 +237,7 @@ async fn session_add_peer_posts_to_session_peers() {
     Mock::given(method("POST"))
         .and(path("/v3/workspaces/ws1/sessions/sess1/peers"))
         .and(body_json(json!({"alice": {}})))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .respond_with(ResponseTemplate::new(200))
         .mount(&server)
         .await;
 
@@ -256,7 +256,7 @@ async fn session_add_peers_with_config() {
         .and(body_json(json!({
             "alice": {"observe_me": true, "observe_others": false}
         })))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .respond_with(ResponseTemplate::new(200))
         .mount(&server)
         .await;
 
@@ -274,7 +274,7 @@ async fn session_set_peers_puts_to_session_peers() {
     Mock::given(method("PUT"))
         .and(path("/v3/workspaces/ws1/sessions/sess1/peers"))
         .and(body_json(json!({"bob": {}, "carol": {}})))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .respond_with(ResponseTemplate::new(200))
         .mount(&server)
         .await;
 
@@ -344,7 +344,7 @@ async fn peer_spec_from_str() {
     Mock::given(method("POST"))
         .and(path("/v3/workspaces/ws1/sessions/sess1/peers"))
         .and(body_json(json!({"alice": {}})))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .respond_with(ResponseTemplate::new(200))
         .mount(&server)
         .await;
 
@@ -359,7 +359,7 @@ async fn peer_spec_from_string() {
     Mock::given(method("POST"))
         .and(path("/v3/workspaces/ws1/sessions/sess1/peers"))
         .and(body_json(json!({"alice": {}})))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .respond_with(ResponseTemplate::new(200))
         .mount(&server)
         .await;
 
@@ -381,7 +381,7 @@ async fn peer_spec_from_tuple_str_config() {
         .and(body_json(json!({
             "alice": {"observe_me": true}
         })))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+        .respond_with(ResponseTemplate::new(200))
         .mount(&server)
         .await;
 
