@@ -4,6 +4,7 @@ use std::pin::Pin;
 use futures_util::Stream;
 use serde_json::Value;
 
+use crate::dialectic_stream::DialecticStream;
 use crate::error::Result;
 use crate::types::dialectic::{DialecticOptions, ReasoningLevel};
 use crate::types::message::MessageSearchOptions;
@@ -219,15 +220,35 @@ impl BlockingChatStreamBuilder {
     /// Send and return an iterator over SSE chunks.
     pub fn send(self) -> Result<ChatStreamIterator> {
         let stream = block_on(self.inner.send())?;
+        let boxed: DialecticStream<Pin<Box<dyn Stream<Item = Result<String>> + Send>>> =
+            DialecticStream::new(Box::pin(stream));
         Ok(ChatStreamIterator {
-            inner: BlockingIter::new(stream),
+            inner: BlockingIter::new(boxed),
         })
     }
 }
 
 /// Iterator over streaming dialectic chat chunks.
+///
+/// Wraps a [`DialecticStream`], so [`final_response`](DialecticStream::final_response)
+/// and [`is_complete`](DialecticStream::is_complete) are available after iteration.
+#[allow(clippy::type_complexity)]
 pub struct ChatStreamIterator {
-    inner: BlockingIter<Pin<Box<dyn Stream<Item = Result<String>> + Send>>>,
+    inner: BlockingIter<DialecticStream<Pin<Box<dyn Stream<Item = Result<String>> + Send>>>>,
+}
+
+impl ChatStreamIterator {
+    /// Access the accumulated [`FinalResponse`](crate::FinalResponse).
+    #[must_use]
+    pub fn final_response(&self) -> &crate::FinalResponse {
+        self.inner.stream().final_response()
+    }
+
+    /// Whether the underlying stream has ended.
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.inner.stream().is_complete()
+    }
 }
 
 impl Iterator for ChatStreamIterator {

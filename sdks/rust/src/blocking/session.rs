@@ -1,7 +1,10 @@
 use std::collections::HashMap;
+use std::io::Read;
 
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 
+use crate::FileSource;
 use crate::error::Result;
 use crate::session::PeerSpec;
 use crate::types::message::MessageSearchOptions;
@@ -192,5 +195,102 @@ impl Session {
         sender_id: Option<&str>,
     ) -> Result<crate::types::dream::QueueStatus> {
         block_on(self.inner.queue_status(observer_id, sender_id))
+    }
+
+    /// Begin a file upload to this session.
+    ///
+    /// Returns a [`BlockingUploadFileBuilder`]. You **must** call `.peer(id)`
+    /// and then `.send()` to complete the upload.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::blocking::Session) -> honcho_ai::error::Result<()> {
+    /// let msgs = session
+    ///     .upload_file(honcho_ai::FileSource::bytes("doc.pdf", b"data", "application/pdf"))
+    ///     .peer("alice")
+    ///     .send()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn upload_file(&self, source: impl Into<FileSource>) -> BlockingUploadFileBuilder<'_> {
+        BlockingUploadFileBuilder {
+            inner: self.inner.upload_file(source),
+        }
+    }
+
+    /// Begin a file upload from a synchronous reader.
+    ///
+    /// The reader is fully consumed into memory before the builder is returned,
+    /// so this is not truly streaming — but it provides the same builder API as
+    /// the async counterpart for convenience.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HonchoError::Io`](crate::error::HonchoError::Io) if reading
+    /// from `reader` fails.
+    pub fn upload_file_streamed(
+        &self,
+        filename: impl Into<String>,
+        mut reader: impl Read + Send + 'static,
+        content_type: impl Into<String>,
+    ) -> Result<BlockingUploadFileBuilder<'_>> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes)?;
+        Ok(BlockingUploadFileBuilder {
+            inner: self
+                .inner
+                .upload_file(FileSource::bytes(filename, bytes, content_type)),
+        })
+    }
+}
+
+/// Blocking wrapper around [`crate::UploadFileBuilder`].
+pub struct BlockingUploadFileBuilder<'a> {
+    inner: crate::UploadFileBuilder<'a>,
+}
+
+impl BlockingUploadFileBuilder<'_> {
+    /// Set the peer that owns the uploaded file (required).
+    #[must_use]
+    pub fn peer(self, id: impl Into<String>) -> Self {
+        Self {
+            inner: self.inner.peer(id),
+        }
+    }
+
+    /// Attach arbitrary JSON metadata to the created message(s).
+    #[must_use]
+    pub fn metadata(self, value: Value) -> Self {
+        Self {
+            inner: self.inner.metadata(value),
+        }
+    }
+
+    /// Attach configuration to the created message(s).
+    #[must_use]
+    pub fn configuration(self, value: Value) -> Self {
+        Self {
+            inner: self.inner.configuration(value),
+        }
+    }
+
+    /// Override the creation timestamp (ISO 3339).
+    #[must_use]
+    pub fn created_at(self, dt: DateTime<Utc>) -> Self {
+        Self {
+            inner: self.inner.created_at(dt),
+        }
+    }
+
+    /// Send the upload request and return the created messages.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`HonchoError::Validation`](crate::error::HonchoError::Validation)
+    /// if no peer was set via `.peer()`.
+    pub fn send(self) -> Result<Vec<crate::Message>> {
+        block_on(self.inner.send())
     }
 }

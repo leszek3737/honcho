@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::conclusion::ConclusionScope;
+use crate::dialectic_stream::DialecticStream;
 use crate::error::{HonchoError, Result};
 use crate::http::client::HttpClient;
 use crate::http::routes;
@@ -927,6 +928,7 @@ impl ChatStreamBuilder {
     /// while let Some(chunk) = stream.next().await {
     ///     println!("{}", chunk?);
     /// }
+    /// println!("full: {}", stream.final_response().content());
     /// # Ok(())
     /// # }
     /// ```
@@ -935,8 +937,10 @@ impl ChatStreamBuilder {
     ///
     /// Returns `HonchoError::Validation` if the query is empty.
     /// Returns transport/API errors if the request fails.
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(peer_id = self.peer_id.as_str())))]
-    pub async fn send(self) -> Result<Pin<Box<dyn Stream<Item = Result<String>> + Send>>> {
+    #[allow(clippy::type_complexity)]
+    pub async fn send(
+        self,
+    ) -> Result<DialecticStream<Pin<Box<dyn Stream<Item = Result<String>> + Send>>>> {
         if self.query.is_empty() {
             return Err(HonchoError::Validation(
                 "query must not be empty".to_owned(),
@@ -965,7 +969,9 @@ impl ChatStreamBuilder {
             )
             .await?;
 
-        Ok(Box::pin(parse_sse_stream(response.bytes_stream())))
+        Ok(DialecticStream::new(Box::pin(parse_sse_stream(
+            response.bytes_stream(),
+        ))))
     }
 }
 
@@ -1252,7 +1258,11 @@ mod tests {
 
     #[test]
     fn chat_stream_return_type_is_send_static() {
-        fn _assertion(stream: Pin<Box<dyn futures_util::Stream<Item = Result<String>> + Send>>) {
+        fn _assertion(
+            stream: DialecticStream<
+                Pin<Box<dyn futures_util::Stream<Item = Result<String>> + Send>>,
+            >,
+        ) {
             assert_send_static(&stream);
         }
     }

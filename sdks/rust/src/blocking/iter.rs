@@ -17,6 +17,10 @@ impl<S> BlockingIter<S> {
             stream: Box::pin(stream),
         }
     }
+
+    pub(crate) fn stream(&self) -> &S {
+        self.stream.as_ref().get_ref()
+    }
 }
 
 impl<S> Iterator for BlockingIter<S>

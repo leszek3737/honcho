@@ -1093,13 +1093,40 @@ impl Session {
     /// ```
     #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(session_id = self.inner.id.as_str())))]
     pub async fn representation(&self, peer_id: &str) -> Result<String> {
-        let route = routes::peer_representation(&self.inner.workspace_id, peer_id);
-        let body = serde_json::json!({
-            "session_id": self.inner.id,
-        });
-        let resp: crate::types::dialectic::RepresentationResponse =
-            self.inner.http.post(&route, Some(&body), &[]).await?;
-        Ok(resp.representation)
+        self.representation_builder(peer_id).send().await
+    }
+
+    /// Create a builder for fine-grained representation requests scoped to this session.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # async fn example(session: &honcho_ai::Session) -> honcho_ai::error::Result<()> {
+    /// let rep = session.representation_builder("alice")
+    ///     .search_query("hobbies")
+    ///     .search_top_k(10)
+    ///     .send()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn representation_builder(
+        &self,
+        peer_id: impl Into<String>,
+    ) -> SessionRepresentationBuilder {
+        SessionRepresentationBuilder {
+            http: self.inner.http.clone(),
+            workspace_id: self.inner.workspace_id.clone(),
+            session_id: self.inner.id.clone(),
+            peer_id: peer_id.into(),
+            target: None,
+            search_query: None,
+            search_top_k: None,
+            search_max_distance: None,
+            include_most_frequent: None,
+            max_conclusions: None,
+        }
     }
 
     /// Get the processing queue status for this session.
@@ -1127,6 +1154,171 @@ impl Session {
             query.push(("sender_id", v));
         }
         self.inner.http.get(&route, &query).await
+    }
+}
+
+/// Builder for fine-grained representation requests scoped to a session.
+pub struct SessionRepresentationBuilder {
+    http: HttpClient,
+    workspace_id: String,
+    session_id: String,
+    peer_id: String,
+    target: Option<String>,
+    search_query: Option<String>,
+    search_top_k: Option<u32>,
+    search_max_distance: Option<f64>,
+    include_most_frequent: Option<bool>,
+    max_conclusions: Option<u32>,
+}
+
+impl SessionRepresentationBuilder {
+    /// Get the representation for a specific target peer.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::Session) {
+    /// let _builder = session.representation_builder("alice").target("bob");
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn target(mut self, val: impl Into<String>) -> Self {
+        self.target = Some(val.into());
+        self
+    }
+
+    /// Semantic search query to curate the representation.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::Session) {
+    /// let _builder = session.representation_builder("alice").search_query("hobbies");
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn search_query(mut self, val: impl Into<String>) -> Self {
+        self.search_query = Some(val.into());
+        self
+    }
+
+    /// Number of semantic-search-retrieved conclusions (1–100).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::Session) {
+    /// let _builder = session.representation_builder("alice").search_top_k(20);
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn search_top_k(mut self, val: u32) -> Self {
+        self.search_top_k = Some(val);
+        self
+    }
+
+    /// Maximum distance for semantically relevant conclusions (0.0–1.0).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::Session) {
+    /// let _builder = session.representation_builder("alice").search_max_distance(0.5);
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn search_max_distance(mut self, val: f64) -> Self {
+        self.search_max_distance = Some(val);
+        self
+    }
+
+    /// Whether to include the most frequent conclusions.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::Session) {
+    /// let _builder = session.representation_builder("alice").include_most_frequent(true);
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn include_most_frequent(mut self, val: bool) -> Self {
+        self.include_most_frequent = Some(val);
+        self
+    }
+
+    /// Maximum number of conclusions to include (1–100).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn example(session: &honcho_ai::Session) {
+    /// let _builder = session.representation_builder("alice").max_conclusions(25);
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn max_conclusions(mut self, val: u32) -> Self {
+        self.max_conclusions = Some(val);
+        self
+    }
+
+    /// Send the representation request with the configured parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # async fn example(session: &honcho_ai::Session) -> honcho_ai::error::Result<()> {
+    /// let rep = session.representation_builder("alice")
+    ///     .search_query("hobbies")
+    ///     .search_top_k(10)
+    ///     .send()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `HonchoError::Validation` if `search_top_k`, `search_max_distance`,
+    /// or `max_conclusions` are out of range.
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), fields(session_id = self.session_id.as_str(), peer_id = self.peer_id.as_str())))]
+    pub async fn send(self) -> Result<String> {
+        if let Some(k) = self.search_top_k
+            && !(1..=100).contains(&k)
+        {
+            return Err(HonchoError::Validation(format!(
+                "search_top_k must be between 1 and 100, got {k}"
+            )));
+        }
+        if let Some(d) = self.search_max_distance
+            && !(0.0..=1.0).contains(&d)
+        {
+            return Err(HonchoError::Validation(format!(
+                "search_max_distance must be between 0.0 and 1.0, got {d}"
+            )));
+        }
+        if let Some(c) = self.max_conclusions
+            && !(1..=100).contains(&c)
+        {
+            return Err(HonchoError::Validation(format!(
+                "max_conclusions must be between 1 and 100, got {c}"
+            )));
+        }
+
+        let params = crate::types::peer::PeerRepresentationGet {
+            session_id: Some(self.session_id),
+            target: self.target,
+            search_query: self.search_query,
+            search_top_k: self.search_top_k,
+            search_max_distance: self.search_max_distance,
+            include_most_frequent: self.include_most_frequent,
+            max_conclusions: self.max_conclusions,
+        };
+
+        let route = routes::peer_representation(&self.workspace_id, &self.peer_id);
+        let resp: crate::types::dialectic::RepresentationResponse =
+            self.http.post(&route, Some(&params), &[]).await?;
+        Ok(resp.representation)
     }
 }
 
