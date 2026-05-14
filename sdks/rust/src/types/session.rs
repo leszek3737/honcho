@@ -368,7 +368,7 @@ impl SessionContext {
         if let Some(ref card) = self.peer_card {
             result.push(serde_json::json!({
                 "role": "system",
-                "content": format!("<peer_card>[{}]</peer_card>", card.iter().map(|s| format!("'{s}'")).collect::<Vec<_>>().join(", ")),
+                "content": format!("<peer_card>[{}]</peer_card>", card.iter().map(|s| format!("'{}'", s.replace('\'', "\\'"))).collect::<Vec<_>>().join(", ")),
             }));
         }
 
@@ -422,7 +422,7 @@ impl SessionContext {
         if let Some(ref card) = self.peer_card {
             result.push(serde_json::json!({
                 "role": "user",
-                "content": format!("<peer_card>[{}]</peer_card>", card.iter().map(|s| format!("'{s}'")).collect::<Vec<_>>().join(", ")),
+                "content": format!("<peer_card>[{}]</peer_card>", card.iter().map(|s| format!("'{}'", s.replace('\'', "\\'"))).collect::<Vec<_>>().join(", ")),
             }));
         }
 

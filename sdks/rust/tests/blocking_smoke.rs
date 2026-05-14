@@ -919,3 +919,28 @@ async fn blocking_client_set_metadata() {
         client.set_metadata(meta).unwrap();
     });
 }
+
+#[cfg(feature = "blocking")]
+#[tokio::test]
+async fn blocking_client_refresh() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/v3/workspaces"))
+        .and(body_json(serde_json::json!({"id": "ws1"})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "id": "ws1",
+            "metadata": {"env": "test"},
+            "configuration": {"reasoning": {"enabled": true}},
+            "created_at": "2025-01-15T10:30:00Z"
+        })))
+        .up_to_n_times(3)
+        .mount(&server)
+        .await;
+
+    let uri = server.uri();
+    blocking(move || {
+        let client = Honcho::new(&uri, "ws1").unwrap();
+        client.refresh().unwrap();
+    });
+}
