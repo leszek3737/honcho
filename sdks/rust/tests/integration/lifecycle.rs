@@ -179,11 +179,12 @@ async fn session_clone_and_summaries() {
 
     let cloned = match session.clone_session().await {
         Ok(c) => c,
-        Err(e) => {
-            eprintln!("skipping clone test: server clone endpoint failed: {e}");
+        Err(honcho_ai::error::HonchoError::Server { .. }) => {
+            eprintln!("skipping clone test: server clone endpoint returned 5xx");
             session.delete().await.ok();
             return;
         }
+        Err(e) => panic!("clone_session failed with non-server error: {e}"),
     };
     assert_ne!(cloned.id(), session.id());
 
