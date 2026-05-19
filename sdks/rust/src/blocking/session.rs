@@ -388,12 +388,15 @@ impl BlockingUploadFileBuilder<'_> {
     pub fn send(self) -> Result<Vec<crate::Message>> {
         let result = block_on(self.inner.send());
 
-        if let Some(handle) = self.reader_handle
-            && let Err(join_error) = block_on(handle)
-        {
-            return Err(HonchoError::Io(std::io::Error::other(
-                join_error.to_string(),
-            )));
+        if let Some(handle) = self.reader_handle {
+            let join_result = block_on(handle);
+            if result.is_ok()
+                && let Err(join_error) = join_result
+            {
+                return Err(HonchoError::Io(std::io::Error::other(
+                    join_error.to_string(),
+                )));
+            }
         }
 
         result

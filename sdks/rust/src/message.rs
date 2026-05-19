@@ -99,14 +99,9 @@ impl Message {
 impl fmt::Debug for Message {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let content = &self.inner.content;
-        let truncated: Cow<'_, str> = if content.chars().count() > 50 {
-            let end = content
-                .char_indices()
-                .nth(50)
-                .map_or(content.len(), |(i, _)| i);
-            Cow::Owned(format!("{}...", &content[..end]))
-        } else {
-            Cow::Borrowed(content)
+        let truncated: Cow<'_, str> = match content.char_indices().nth(50) {
+            Some((idx, _)) => Cow::Owned(format!("{}...", &content[..idx])),
+            None => Cow::Borrowed(content),
         };
         f.debug_struct("Message")
             .field("id", &self.inner.id)

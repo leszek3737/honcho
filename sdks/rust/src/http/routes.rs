@@ -4,7 +4,7 @@ use crate::error::{HonchoError, Result};
 
 pub(crate) const API_BASE_PATH: &str = "v3";
 
-fn encode(s: &str) -> Result<String> {
+fn encode(s: &str) -> String {
     let mut encoded = String::with_capacity(s.len() * 3);
     for byte in s.bytes() {
         match byte {
@@ -12,12 +12,11 @@ fn encode(s: &str) -> Result<String> {
                 encoded.push(byte as char);
             }
             _ => {
-                write!(encoded, "%{byte:02X}")
-                    .map_err(|e| HonchoError::Configuration(format!("url encoding failed: {e}")))?;
+                let _ = write!(encoded, "%{byte:02X}");
             }
         }
     }
-    Ok(encoded)
+    encoded
 }
 
 fn validate_not_empty(id: &str, name: &str) -> Result<()> {
@@ -42,7 +41,7 @@ pub(crate) fn workspace(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -51,7 +50,7 @@ pub(crate) fn workspace_search(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/search",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -60,7 +59,7 @@ pub(crate) fn workspace_queue_status(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/queue/status",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -69,7 +68,7 @@ pub(crate) fn workspace_schedule_dream(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/schedule_dream",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -78,7 +77,7 @@ pub(crate) fn peers(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -87,7 +86,7 @@ pub(crate) fn peers_list(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/list",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -97,8 +96,8 @@ pub(crate) fn peer(workspace_id: &str, peer_id: &str) -> Result<String> {
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -108,8 +107,8 @@ pub(crate) fn peer_chat(workspace_id: &str, peer_id: &str) -> Result<String> {
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}/chat",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -119,8 +118,8 @@ pub(crate) fn peer_representation(workspace_id: &str, peer_id: &str) -> Result<S
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}/representation",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -130,8 +129,8 @@ pub(crate) fn peer_card(workspace_id: &str, peer_id: &str) -> Result<String> {
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}/card",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -141,8 +140,8 @@ pub(crate) fn peer_context(workspace_id: &str, peer_id: &str) -> Result<String> 
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}/context",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -152,8 +151,8 @@ pub(crate) fn peer_search(workspace_id: &str, peer_id: &str) -> Result<String> {
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}/search",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -163,8 +162,8 @@ pub(crate) fn peer_sessions_list(workspace_id: &str, peer_id: &str) -> Result<St
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/peers/{}/sessions",
-        encode(workspace_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(peer_id)
     ))
 }
 
@@ -173,7 +172,7 @@ pub(crate) fn sessions(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -182,7 +181,7 @@ pub(crate) fn sessions_list(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/list",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -192,8 +191,8 @@ pub(crate) fn session(workspace_id: &str, session_id: &str) -> Result<String> {
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -203,8 +202,8 @@ pub(crate) fn session_clone(workspace_id: &str, session_id: &str) -> Result<Stri
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/clone",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -214,8 +213,8 @@ pub(crate) fn session_context(workspace_id: &str, session_id: &str) -> Result<St
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/context",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -225,8 +224,8 @@ pub(crate) fn session_summaries(workspace_id: &str, session_id: &str) -> Result<
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/summaries",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -236,8 +235,8 @@ pub(crate) fn session_search(workspace_id: &str, session_id: &str) -> Result<Str
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/search",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -247,8 +246,8 @@ pub(crate) fn session_peers(workspace_id: &str, session_id: &str) -> Result<Stri
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/peers",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -263,9 +262,9 @@ pub(crate) fn session_peer_config(
     validate_not_empty(peer_id, "peer_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/peers/{}/config",
-        encode(workspace_id)?,
-        encode(session_id)?,
-        encode(peer_id)?
+        encode(workspace_id),
+        encode(session_id),
+        encode(peer_id)
     ))
 }
 
@@ -275,8 +274,8 @@ pub(crate) fn messages(workspace_id: &str, session_id: &str) -> Result<String> {
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/messages",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -286,8 +285,8 @@ pub(crate) fn messages_list(workspace_id: &str, session_id: &str) -> Result<Stri
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/messages/list",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -298,9 +297,9 @@ pub(crate) fn message(workspace_id: &str, session_id: &str, message_id: &str) ->
     validate_not_empty(message_id, "message_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/messages/{}",
-        encode(workspace_id)?,
-        encode(session_id)?,
-        encode(message_id)?
+        encode(workspace_id),
+        encode(session_id),
+        encode(message_id)
     ))
 }
 
@@ -310,8 +309,8 @@ pub(crate) fn messages_upload(workspace_id: &str, session_id: &str) -> Result<St
     validate_not_empty(session_id, "session_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/sessions/{}/messages/upload",
-        encode(workspace_id)?,
-        encode(session_id)?
+        encode(workspace_id),
+        encode(session_id)
     ))
 }
 
@@ -320,7 +319,7 @@ pub(crate) fn conclusions(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/conclusions",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -329,7 +328,7 @@ pub(crate) fn conclusions_list(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/conclusions/list",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -338,7 +337,7 @@ pub(crate) fn conclusions_query(workspace_id: &str) -> Result<String> {
     validate_not_empty(workspace_id, "workspace_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/conclusions/query",
-        encode(workspace_id)?
+        encode(workspace_id)
     ))
 }
 
@@ -348,8 +347,8 @@ pub(crate) fn conclusion(workspace_id: &str, conclusion_id: &str) -> Result<Stri
     validate_not_empty(conclusion_id, "conclusion_id")?;
     Ok(format!(
         "/{API_BASE_PATH}/workspaces/{}/conclusions/{}",
-        encode(workspace_id)?,
-        encode(conclusion_id)?
+        encode(workspace_id),
+        encode(conclusion_id)
     ))
 }
 
